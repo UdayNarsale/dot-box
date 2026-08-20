@@ -219,27 +219,67 @@ export function gameFromLobby(
   dots: number,
   playerCount: number,
   partial: {
-    lines: Record<string, number>
-    boxes: Record<string, number>
-    scores: number[]
+    lines?: Record<string, number> | null
+    boxes?: Record<string, number> | null
+    scores: number[] | Record<string, number>
     turnIndex: number
     moveCount: number
     finished: boolean
-    skipPenalties?: number[]
+    skipPenalties?: number[] | Record<string, number> | null
   },
 ): GameState {
   const p = clampPlayers(playerCount)
-  const skipPenalties = [...(partial.skipPenalties ?? [])]
-  while (skipPenalties.length < p) skipPenalties.push(0)
+  const scores = toNumberArray(partial.scores, p, 0)
+  const skipPenalties = toNumberArray(partial.skipPenalties, p, 0)
   return {
     dots: clampDots(dots),
     playerCount: p,
-    lines: partial.lines ?? {},
-    boxes: partial.boxes ?? {},
-    scores: partial.scores,
-    turnIndex: partial.turnIndex,
-    moveCount: partial.moveCount,
-    finished: partial.finished,
-    skipPenalties: skipPenalties.slice(0, p),
+    lines: sanitizeEdgeMap(partial.lines),
+    boxes: sanitizeEdgeMap(partial.boxes),
+    scores,
+    turnIndex: Number(partial.turnIndex) || 0,
+    moveCount: Number(partial.moveCount) || 0,
+    finished: Boolean(partial.finished),
+    skipPenalties,
   }
+}
+
+/** Firebase may return arrays as objects with numeric keys. */
+function toNumberArray(
+  value: number[] | Record<string, number> | null | undefined,
+  length: number,
+  fill: number,
+): number[] {
+  const out = Array.from({ length }, () => fill)
+  if (value == null) return out
+  if (Array.isArray(value)) {
+    for (let i = 0; i < length; i++) out[i] = Number(value[i] ?? fill) || fill
+    return out
+  }
+  for (let i = 0; i < length; i++) {
+    out[i] = Number(value[String(i)] ?? value[i as unknown as string] ?? fill) || fill
+  }
+  return out
+}
+
+function sanitizeEdgeMap(
+  value: Record<string, number> | null | undefined,
+): Record<string, number> {
+  if (!value || typeof value !== 'object') return {}
+  const out: Record<string, number> = {}
+  for (const [k, v] of Object.entries(value)) {
+    if (k.startsWith('_')) continue
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v
+  }
+  return out
+}
+
+/** Normalize seatOrder whether Firebase returns an array or object. */
+export function toStringList(value: string[] | Record<string, string> | null | undefined): string[] {
+  if (!value) return []
+  if (Array.isArray(value)) return value.filter(Boolean)
+  return Object.keys(value)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((k) => value[k]!)
+    .filter(Boolean)
 }

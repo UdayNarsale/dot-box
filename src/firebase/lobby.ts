@@ -8,7 +8,7 @@ import {
   update,
   type Unsubscribe,
 } from 'firebase/database'
-import { applyTimeoutPenalty, createGame } from '../engine/gameEngine'
+import { applyTimeoutPenalty, createGame, toStringList } from '../engine/gameEngine'
 import type { LobbyGame, LobbySettings, LobbyState } from '../types/game'
 import { ensureAnonymousAuth, getFirebaseDb } from './config'
 
@@ -20,6 +20,32 @@ function withTurnClock(game: Omit<LobbyGame, 'turnStartedAt'> | LobbyGame): Lobb
   return {
     ...game,
     turnStartedAt: nowMs(),
+  }
+}
+
+/** RTDB drops empty objects and may return arrays as maps — normalize for the UI. */
+export function normalizeLobby(raw: LobbyState): LobbyState {
+  const seatOrder = toStringList(
+    raw.seatOrder as string[] | Record<string, string> | null | undefined,
+  )
+  return {
+    ...raw,
+    seatOrder,
+    settings: {
+      dots: Number(raw.settings?.dots) || 5,
+      maxPlayers: Number(raw.settings?.maxPlayers) || 4,
+      turnSeconds: Number(raw.settings?.turnSeconds) || 0,
+    },
+    players: raw.players ?? {},
+    game: raw.game
+      ? {
+          ...raw.game,
+          lines: raw.game.lines ?? {},
+          boxes: raw.game.boxes ?? {},
+          skipPenalties: raw.game.skipPenalties ?? [],
+          turnStartedAt: Number(raw.game.turnStartedAt) || Date.now(),
+        }
+      : null,
   }
 }
 
@@ -348,6 +374,10 @@ export async function deleteLobby(code: string, uid: string): Promise<void> {
 
 export function subscribeLobby(code: string, onData: (lobby: LobbyState | null) => void): Unsubscribe {
   return onValue(lobbyRef(code), (snap) => {
-    onData(snap.exists() ? (snap.val() as LobbyState) : null)
+    if (!snap.exists()) {
+      onData(null)
+      return
+    }
+    onData(normalizeLobby(snap.val() as LobbyState))
   })
 }

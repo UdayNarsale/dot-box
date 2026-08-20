@@ -154,7 +154,7 @@ export function LocalGame({ onExit }: LocalGameProps) {
     colorIndex: p.colorIndex,
     score: game.scores[i] ?? 0,
     active: !game.finished && game.turnIndex === i,
-    skipNext: (game.skipPenalties[i] ?? 0) > 0,
+    skipNext: (game.skipPenalties?.[i] ?? 0) > 0,
   }))
 
   const winTitle =

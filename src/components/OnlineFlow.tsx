@@ -268,42 +268,52 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
   if (!online.game) {
     return (
       <main className="min-h-full flex items-center justify-center p-6">
-        <p className="text-slate-600">Loading board…</p>
+        <div className="text-center space-y-3">
+          <p className="text-slate-600">
+            {liveLobby.status === 'playing' ? 'Starting game…' : 'Loading board…'}
+          </p>
+          {online.error && (
+            <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+              {online.error}
+            </p>
+          )}
+        </div>
       </main>
     )
   }
 
   const playGame = online.game
-  const statusPlayers = liveLobby.seatOrder.map((id, i) => {
-    const p = liveLobby.players[id]!
+  const statusPlayers = (liveLobby.seatOrder ?? []).map((id, i) => {
+    const p = liveLobby.players?.[id]
     return {
-      name: p.name,
-      colorIndex: p.colorIndex,
-      score: playGame.scores[i] ?? 0,
+      name: p?.name ?? `Player ${i + 1}`,
+      colorIndex: p?.colorIndex ?? i,
+      score: playGame.scores?.[i] ?? 0,
       active: !playGame.finished && playGame.turnIndex === i,
       isYou: id === online.uid,
-      skipNext: (playGame.skipPenalties[i] ?? 0) > 0,
+      skipNext: (playGame.skipPenalties?.[i] ?? 0) > 0,
     }
   })
 
   const myTurn =
     !playGame.finished &&
     online.uid !== null &&
-    liveLobby.seatOrder[playGame.turnIndex] === online.uid
+    liveLobby.seatOrder?.[playGame.turnIndex] === online.uid
 
   const winners = online.winnerIndices
+  const winnerSeat = winners.length === 1 ? liveLobby.seatOrder?.[winners[0]!] : undefined
   const winTitle =
     winners.length > 1
       ? 'It\'s a tie!'
       : winners.length === 1
-        ? `${liveLobby.players[liveLobby.seatOrder[winners[0]!]!]!.name} wins!`
+        ? `${liveLobby.players?.[winnerSeat!]?.name ?? 'Player'} wins!`
         : 'Game over'
 
   const winDetail =
     winners.length > 1
-      ? `Tied at ${playGame.scores[winners[0]!]!} boxes.`
+      ? `Tied at ${playGame.scores?.[winners[0]!] ?? 0} boxes.`
       : winners.length === 1
-        ? `${liveLobby.players[liveLobby.seatOrder[winners[0]!]!]!.name} claimed ${playGame.scores[winners[0]!]!} boxes.`
+        ? `${liveLobby.players?.[winnerSeat!]?.name ?? 'Player'} claimed ${playGame.scores?.[winners[0]!] ?? 0} boxes.`
         : ''
 
   return (
@@ -324,7 +334,8 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
       />
       {!myTurn && !playGame.finished && (
         <p className="text-center text-sm text-slate-500 px-4">
-          Waiting for {liveLobby.players[liveLobby.seatOrder[playGame.turnIndex]!]?.name ?? 'opponent'}
+          Waiting for{' '}
+          {liveLobby.players?.[liveLobby.seatOrder?.[playGame.turnIndex] ?? '']?.name ?? 'opponent'}
           …
         </p>
       )}
@@ -334,8 +345,8 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
           interactive={myTurn}
           onEdgeClick={(id) => void online.playEdge(id)}
           highlightPlayer={playGame.turnIndex}
-          playerColorIndexes={liveLobby.seatOrder.map(
-            (id) => liveLobby.players[id]!.colorIndex,
+          playerColorIndexes={(liveLobby.seatOrder ?? []).map(
+            (id) => liveLobby.players?.[id]?.colorIndex ?? 0,
           )}
         />
       </div>
@@ -349,7 +360,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
         title={winTitle}
         detail={winDetail}
         winnerColorIndexes={winners.map(
-          (i) => liveLobby.players[liveLobby.seatOrder[i]!]!.colorIndex,
+          (i) => liveLobby.players?.[liveLobby.seatOrder?.[i] ?? '']?.colorIndex ?? 0,
         )}
         primaryLabel={isHost ? 'Play Again' : 'Waiting for host…'}
         onPrimary={() => {

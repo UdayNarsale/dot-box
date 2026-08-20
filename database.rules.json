@@ -22,7 +22,7 @@
             ".validate": "newData.isNumber() && newData.val() >= 2 && newData.val() <= 8"
           },
           "turnSeconds": {
-            ".validate": "newData.isNumber() && (newData.val() === 0 || (newData.val() >= 5 && newData.val() <= 600))"
+            ".validate": "!newData.exists() || (newData.isNumber() && (newData.val() === 0 || (newData.val() >= 5 && newData.val() <= 600)))"
           }
         },
         "players": {
@@ -41,7 +41,7 @@
           }
         },
         "game": {
-          ".validate": "newData.val() === null || newData.hasChildren(['lines', 'boxes', 'scores', 'turnIndex', 'moveCount', 'finished'])",
+          ".validate": "newData.val() === null || newData.hasChildren(['scores', 'turnIndex', 'moveCount', 'finished'])",
           "lines": {
             "$edgeId": {
               ".validate": "!data.exists() && newData.isNumber() && newData.val() >= 0 && newData.val() <= 7"
@@ -57,10 +57,10 @@
             ".validate": "newData.isBoolean()"
           },
           "turnStartedAt": {
-            ".validate": "newData.isNumber() && newData.val() > 0"
+            ".validate": "!newData.exists() || (newData.isNumber() && newData.val() > 0)"
           },
           "skipPenalties": {
-            ".validate": "newData.hasChildren() || newData.val() === null"
+            ".validate": "!newData.exists() || newData.hasChildren()"
           }
         },
         "createdAt": {
