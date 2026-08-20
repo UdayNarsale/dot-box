@@ -26,7 +26,30 @@ export function createGame(dots: number, playerCount: number): GameState {
     moveCount: 0,
     finished: false,
     playerCount: p,
+    skipPenalties: Array.from({ length: p }, () => 0),
   }
+}
+
+function normalizePenalties(state: GameState): number[] {
+  const p = [...(state.skipPenalties ?? [])]
+  while (p.length < state.playerCount) p.push(0)
+  return p.slice(0, state.playerCount)
+}
+
+/** Advance turnIndex while burning owed skip penalties. */
+export function consumeSkipPenalties(
+  turnIndex: number,
+  skipPenalties: number[],
+  playerCount: number,
+): { turnIndex: number; skipPenalties: number[] } {
+  const penalties = [...skipPenalties]
+  let t = ((turnIndex % playerCount) + playerCount) % playerCount
+  for (let i = 0; i < playerCount * 4; i++) {
+    if ((penalties[t] ?? 0) <= 0) break
+    penalties[t]! -= 1
+    t = (t + 1) % playerCount
+  }
+  return { turnIndex: t, skipPenalties: penalties }
 }
 
 export function hEdge(r: number, c: number): EdgeId {
@@ -125,8 +148,16 @@ export function placeLine(state: GameState, edgeId: string): PlaceLineResult | n
   const finished = claimed >= totalBoxes
 
   let turnIndex = state.turnIndex
+  let skipPenalties = normalizePenalties(state)
+  // Bonus turn: same player keeps the turn — timer resets via turnStartedAt at the call site.
   if (!finished && !bonusTurn) {
-    turnIndex = (turnIndex + 1) % state.playerCount
+    const advanced = consumeSkipPenalties(
+      (turnIndex + 1) % state.playerCount,
+      skipPenalties,
+      state.playerCount,
+    )
+    turnIndex = advanced.turnIndex
+    skipPenalties = advanced.skipPenalties
   }
 
   return {
@@ -136,6 +167,7 @@ export function placeLine(state: GameState, edgeId: string): PlaceLineResult | n
       boxes,
       scores,
       turnIndex,
+      skipPenalties,
       moveCount: state.moveCount + 1,
       finished,
     },
@@ -144,18 +176,30 @@ export function placeLine(state: GameState, edgeId: string): PlaceLineResult | n
   }
 }
 
-/** All undrawn legal edges on the board. */
-export function availableEdges(state: GameState): EdgeId[] {
-  return allEdgeIds(state.dots).filter((id) => state.lines[id] === undefined)
-}
-
-/** Timer expiry: place a line on a random open edge for the current player. */
-export function placeRandomLine(state: GameState): PlaceLineResult | null {
+/**
+ * Timer expiry: no line drawn.
+ * Ends the current turn and queues one extra skipped turn for that player
+ * (they miss this turn and their next one).
+ */
+export function applyTimeoutPenalty(state: GameState): GameState | null {
   if (state.finished) return null
-  const open = availableEdges(state)
-  if (open.length === 0) return null
-  const pick = open[Math.floor(Math.random() * open.length)]!
-  return placeLine(state, pick)
+
+  const timedOut = state.turnIndex
+  const skipPenalties = normalizePenalties(state)
+  skipPenalties[timedOut] = (skipPenalties[timedOut] ?? 0) + 1
+
+  const advanced = consumeSkipPenalties(
+    (timedOut + 1) % state.playerCount,
+    skipPenalties,
+    state.playerCount,
+  )
+
+  return {
+    ...state,
+    turnIndex: advanced.turnIndex,
+    skipPenalties: advanced.skipPenalties,
+    moveCount: state.moveCount + 1,
+  }
 }
 
 export function clampTurnSeconds(seconds: number): number {
@@ -181,16 +225,21 @@ export function gameFromLobby(
     turnIndex: number
     moveCount: number
     finished: boolean
+    skipPenalties?: number[]
   },
 ): GameState {
+  const p = clampPlayers(playerCount)
+  const skipPenalties = [...(partial.skipPenalties ?? [])]
+  while (skipPenalties.length < p) skipPenalties.push(0)
   return {
     dots: clampDots(dots),
-    playerCount: clampPlayers(playerCount),
+    playerCount: p,
     lines: partial.lines ?? {},
     boxes: partial.boxes ?? {},
     scores: partial.scores,
     turnIndex: partial.turnIndex,
     moveCount: partial.moveCount,
     finished: partial.finished,
+    skipPenalties: skipPenalties.slice(0, p),
   }
 }

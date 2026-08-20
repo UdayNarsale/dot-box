@@ -31,7 +31,7 @@ export function TimerSelect({
   seconds,
   onChange,
   disabled,
-  hint = 'If time runs out, a random open line is placed for that player.',
+  hint = 'If time runs out, that player loses this turn and skips their next turn (no line is drawn).',
 }: TimerSelectProps) {
   const mode = timerModeFromSeconds(seconds)
   const [customText, setCustomText] = useState(

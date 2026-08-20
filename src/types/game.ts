@@ -38,6 +38,8 @@ export interface GameState {
   moveCount: number
   finished: boolean
   playerCount: number
+  /** Extra turns each seat still owes after a timeout (skip next turn penalty). */
+  skipPenalties: number[]
 }
 
 export interface PlaceLineResult {
@@ -70,6 +72,8 @@ export interface LobbyGame {
   finished: boolean
   /** Epoch ms when the current turn clock started. */
   turnStartedAt: number
+  /** Extra turns each seat still owes after a timeout. */
+  skipPenalties: number[]
 }
 
 export interface LobbyState {

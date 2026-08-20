@@ -8,7 +8,7 @@ import {
   update,
   type Unsubscribe,
 } from 'firebase/database'
-import { createGame, placeRandomLine } from '../engine/gameEngine'
+import { applyTimeoutPenalty, createGame } from '../engine/gameEngine'
 import type { LobbyGame, LobbySettings, LobbyState } from '../types/game'
 import { ensureAnonymousAuth, getFirebaseDb } from './config'
 
@@ -218,6 +218,7 @@ export async function startLobbyGame(code: string, uid: string): Promise<void> {
       turnIndex: 0,
       moveCount: 0,
       finished: false,
+      skipPenalties: fresh.skipPenalties,
     })
     return {
       ...current,
@@ -256,6 +257,7 @@ export async function submitOnlineMove(
         turnIndex: nextGame.turnIndex,
         moveCount: nextGame.moveCount,
         finished: nextGame.finished,
+        skipPenalties: nextGame.skipPenalties ?? current.game.skipPenalties ?? [],
       }),
     }
   }).then((res) => {
@@ -263,8 +265,11 @@ export async function submitOnlineMove(
   })
 }
 
-/** When the turn timer expires, place a random open line for the current player. */
-export async function autoPlaceOnlineTurn(code: string, expectedMoveCount: number): Promise<void> {
+/** Timer expiry: end turn + queue one extra skipped turn (no line placed). */
+export async function applyTimeoutOnlineTurn(
+  code: string,
+  expectedMoveCount: number,
+): Promise<void> {
   const r = lobbyRef(code)
   await runTransaction(r, (current: LobbyState | null) => {
     if (!current || current.status !== 'playing' || !current.game) return
@@ -286,21 +291,21 @@ export async function autoPlaceOnlineTurn(code: string, expectedMoveCount: numbe
       moveCount: current.game.moveCount,
       finished: current.game.finished,
       playerCount: current.seatOrder.length,
+      skipPenalties: current.game.skipPenalties ?? [],
     }
-    const result = placeRandomLine(state)
-    if (!result) return
+    const next = applyTimeoutPenalty(state)
+    if (!next) return
 
-    const status = result.state.finished ? 'finished' : 'playing'
     return {
       ...current,
-      status,
       game: withTurnClock({
-        lines: result.state.lines,
-        boxes: result.state.boxes,
-        scores: result.state.scores,
-        turnIndex: result.state.turnIndex,
-        moveCount: result.state.moveCount,
-        finished: result.state.finished,
+        lines: next.lines,
+        boxes: next.boxes,
+        scores: next.scores,
+        turnIndex: next.turnIndex,
+        moveCount: next.moveCount,
+        finished: next.finished,
+        skipPenalties: next.skipPenalties,
       }),
     }
   })
@@ -324,6 +329,7 @@ export async function resetLobbyGame(code: string, uid: string): Promise<void> {
         turnIndex: 0,
         moveCount: 0,
         finished: false,
+        skipPenalties: fresh.skipPenalties,
       }),
     }
   }).then((res) => {

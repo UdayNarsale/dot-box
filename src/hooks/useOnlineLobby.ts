@@ -9,7 +9,7 @@ import {
   leaveLobby,
   resetLobbyGame,
   setPlayerColor,
-  autoPlaceOnlineTurn,
+  applyTimeoutOnlineTurn,
   startLobbyGame,
   submitOnlineMove,
   subscribeLobby,
@@ -27,6 +27,7 @@ export function useOnlineLobby() {
   /** Move counts we already played SFX for (self submit or remote hear). */
   const heardMoveRef = useRef(0)
   const lastBoxCountRef = useRef(0)
+  const lastLineCountRef = useRef(0)
   const selfMoveRef = useRef(0)
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export function useOnlineLobby() {
   useEffect(() => {
     heardMoveRef.current = 0
     lastBoxCountRef.current = 0
+    lastLineCountRef.current = 0
     selfMoveRef.current = 0
   }, [code])
 
@@ -53,6 +55,7 @@ export function useOnlineLobby() {
     if (game.moveCount === 0) {
       heardMoveRef.current = 0
       lastBoxCountRef.current = Object.keys(game.boxes).length
+      lastLineCountRef.current = Object.keys(game.lines).length
       selfMoveRef.current = 0
       return
     }
@@ -60,17 +63,22 @@ export function useOnlineLobby() {
     if (game.moveCount <= heardMoveRef.current) return
 
     const boxCount = Object.keys(game.boxes).length
+    const lineCount = Object.keys(game.lines).length
     const closedBoxes = boxCount > lastBoxCountRef.current
+    const placedLine = lineCount > lastLineCountRef.current
     const isSelf = game.moveCount === selfMoveRef.current
 
-    // Self already played in playEdge; only play for opponent moves here.
-    if (!isSelf) {
+    // Timeout penalties don't place a line — skip move SFX.
+    if (!isSelf && placedLine) {
       void playMoveSound({ isSelf: false, closedBoxes })
       if (game.finished) void playWinSound()
+    } else if (!isSelf && game.finished) {
+      void playWinSound()
     }
 
     heardMoveRef.current = game.moveCount
     lastBoxCountRef.current = boxCount
+    lastLineCountRef.current = lineCount
   }, [lobby?.game, lobby?.status, uid])
 
   const create = useCallback(async (settings: LobbySettings, hostName: string) => {
@@ -175,6 +183,7 @@ export function useOnlineLobby() {
       await startLobbyGame(code, uid)
       heardMoveRef.current = 0
       lastBoxCountRef.current = 0
+      lastLineCountRef.current = 0
       selfMoveRef.current = 0
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to start')
@@ -190,6 +199,7 @@ export function useOnlineLobby() {
       await resetLobbyGame(code, uid)
       heardMoveRef.current = 0
       lastBoxCountRef.current = 0
+      lastLineCountRef.current = 0
       selfMoveRef.current = 0
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to restart')
@@ -219,6 +229,7 @@ export function useOnlineLobby() {
             turnIndex: result.state.turnIndex,
             moveCount: result.state.moveCount,
             finished: result.state.finished,
+            skipPenalties: result.state.skipPenalties,
           },
           edgeId,
           lobby.game.moveCount,
@@ -226,6 +237,7 @@ export function useOnlineLobby() {
         selfMoveRef.current = result.state.moveCount
         heardMoveRef.current = result.state.moveCount
         lastBoxCountRef.current = Object.keys(result.state.boxes).length
+        lastLineCountRef.current = Object.keys(result.state.lines).length
         await playMoveSound({
           isSelf: true,
           closedBoxes: result.closedBoxes.length > 0,
@@ -246,7 +258,7 @@ export function useOnlineLobby() {
     const turnSeconds = lobby.settings.turnSeconds ?? 0
     if (!turnSeconds) return false
     try {
-      await autoPlaceOnlineTurn(code, lobby.game.moveCount)
+      await applyTimeoutOnlineTurn(code, lobby.game.moveCount)
       return true
     } catch {
       return false

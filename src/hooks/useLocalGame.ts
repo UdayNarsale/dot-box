@@ -1,6 +1,6 @@
 import { useCallback, useReducer, useRef } from 'react'
 import { playMoveSound, playWinSound } from '../audio/sfx'
-import { createGame, placeLine, placeRandomLine, winners } from '../engine/gameEngine'
+import { applyTimeoutPenalty, createGame, placeLine, winners } from '../engine/gameEngine'
 import type { GameState, Player } from '../types/game'
 import { PLAYER_COLORS } from '../types/game'
 
@@ -57,6 +57,7 @@ export function useLocalGame(initialDots = 5, initialPlayers = 2) {
       const before = stateRef.current.game
       const result = placeLine(before, edgeId)
       if (!result) return false
+      // Always refresh the clock (including bonus turns).
       const turnStartedAt = Date.now()
       dispatch({ type: 'apply', game: result.state, turnStartedAt })
       stateRef.current = {
@@ -75,26 +76,18 @@ export function useLocalGame(initialDots = 5, initialPlayers = 2) {
     }
   }, [])
 
-  const expireTurn = useCallback(async () => {
+  const expireTurn = useCallback(() => {
     if (locking.current) return false
     const before = stateRef.current.game
     if (before.finished) return false
-    const result = placeRandomLine(before)
-    if (!result) return false
+    const next = applyTimeoutPenalty(before)
+    if (!next) return false
     locking.current = true
-    try {
-      const turnStartedAt = Date.now()
-      dispatch({ type: 'apply', game: result.state, turnStartedAt })
-      stateRef.current = { ...stateRef.current, game: result.state, turnStartedAt }
-      await playMoveSound({
-        isSelf: true,
-        closedBoxes: result.closedBoxes.length > 0,
-      })
-      if (result.state.finished) await playWinSound()
-      return true
-    } finally {
-      locking.current = false
-    }
+    const turnStartedAt = Date.now()
+    dispatch({ type: 'apply', game: next, turnStartedAt })
+    stateRef.current = { ...stateRef.current, game: next, turnStartedAt }
+    locking.current = false
+    return true
   }, [])
 
   return {

@@ -1,21 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Dots and Boxes">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" fill="none" role="img" aria-label="Dots and Boxes">
   <defs>
-    <linearGradient id="bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+    <linearGradient id="markBg" x1="6" y1="4" x2="66" y2="68" gradientUnits="userSpaceOnUse">
       <stop stop-color="#1e293b"/>
       <stop offset="1" stop-color="#0f172a"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
-  <!-- soft completed box -->
+  <!-- mark -->
+  <rect x="0" y="4" width="64" height="64" rx="14" fill="url(#markBg)"/>
   <rect x="18" y="18" width="28" height="28" rx="4" fill="#2563eb" fill-opacity="0.22"/>
-  <!-- lines: blue top + left, red bottom + right (claimed box) -->
   <path d="M18 18h28" stroke="#3b82f6" stroke-width="4.5" stroke-linecap="round"/>
   <path d="M18 18v28" stroke="#3b82f6" stroke-width="4.5" stroke-linecap="round"/>
   <path d="M18 46h28" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round"/>
   <path d="M46 18v28" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round"/>
-  <!-- dots -->
   <circle cx="18" cy="18" r="4.2" fill="#f8fafc"/>
   <circle cx="46" cy="18" r="4.2" fill="#f8fafc"/>
   <circle cx="18" cy="46" r="4.2" fill="#f8fafc"/>
   <circle cx="46" cy="46" r="4.2" fill="#f8fafc"/>
+  <!-- wordmark -->
+  <text
+    x="80"
+    y="46"
+    fill="#1a1f2e"
+    font-family="Segoe UI, Helvetica Neue, ui-sans-serif, system-ui, sans-serif"
+    font-size="30"
+    font-weight="650"
+    letter-spacing="-0.6"
+  >Dots &amp; Boxes</text>
 </svg>

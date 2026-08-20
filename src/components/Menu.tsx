@@ -1,3 +1,5 @@
+import { BrandLockup } from './BrandMark'
+
 interface MenuProps {
   firebaseReady: boolean
   onLocal: () => void
@@ -9,11 +11,8 @@ export function Menu({ firebaseReady, onLocal, onCreate, onJoin }: MenuProps) {
   return (
     <main className="min-h-full flex items-center justify-center p-6 animate-fade-in">
       <div className="w-full max-w-md">
-        <p className="text-sm font-medium tracking-wide text-slate-500 uppercase">Classic grid game</p>
-        <h1 className="mt-2 text-4xl sm:text-5xl font-semibold tracking-tight text-[var(--color-ink)]">
-          Dots & Boxes
-        </h1>
-        <p className="mt-3 text-slate-600 leading-relaxed">
+        <BrandLockup />
+        <p className="mt-4 text-slate-600 leading-relaxed">
           Claim boxes by drawing lines. 2–8 players, grids from 5×5 to 16×16 dots. Local pass & play or
           online lobby with a shareable code.
         </p>

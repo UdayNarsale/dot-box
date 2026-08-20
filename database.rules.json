@@ -58,6 +58,9 @@
           },
           "turnStartedAt": {
             ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "skipPenalties": {
+            ".validate": "newData.hasChildren() || newData.val() === null"
           }
         },
         "createdAt": {

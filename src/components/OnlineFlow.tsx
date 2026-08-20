@@ -282,6 +282,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
       score: playGame.scores[i] ?? 0,
       active: !playGame.finished && playGame.turnIndex === i,
       isYou: id === online.uid,
+      skipNext: (playGame.skipPenalties[i] ?? 0) > 0,
     }
   })
 

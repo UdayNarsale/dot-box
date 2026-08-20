@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PLAYER_COLORS } from '../types/game'
+import { BrandMark } from './BrandMark'
 import { ConfirmDialog } from './ConfirmDialog'
 
 interface StatusPlayer {
@@ -8,6 +9,8 @@ interface StatusPlayer {
   score: number
   active: boolean
   isYou?: boolean
+  /** Owes one or more skipped turns from timeouts. */
+  skipNext?: boolean
 }
 
 interface StatusBarProps {
@@ -46,13 +49,16 @@ export function StatusBar({
     <>
       <header className="w-full max-w-3xl mx-auto px-3 pt-3 pb-2">
         <div className="flex items-center justify-between gap-2 mb-3">
-          <div>
-            <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--color-ink)]">
-              Dots & Boxes
-            </h1>
-            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <BrandMark className="size-9 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--color-ink)]">
+                Dots & Boxes
+              </h1>
+              {subtitle && <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {timerSeconds !== null && timerSeconds !== undefined && (
               <div
                 className={`rounded-lg px-3 py-2 text-sm font-semibold tabular-nums border transition-colors ${
@@ -114,6 +120,11 @@ export function StatusBar({
                 {p.active && (
                   <div className="animate-turn-label text-[10px] uppercase tracking-wide font-semibold">
                     Turn
+                  </div>
+                )}
+                {!p.active && p.skipNext && (
+                  <div className="text-[10px] uppercase tracking-wide font-semibold text-amber-700">
+                    Skip next
                   </div>
                 )}
               </div>
