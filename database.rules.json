@@ -1,0 +1,69 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "lobbies": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['hostId', 'status', 'settings', 'players', 'seatOrder', 'createdAt']) || !newData.exists()",
+        "hostId": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "status": {
+          ".validate": "newData.val() === 'waiting' || newData.val() === 'playing' || newData.val() === 'finished'"
+        },
+        "settings": {
+          ".validate": "newData.hasChildren(['dots', 'maxPlayers'])",
+          "dots": {
+            ".validate": "newData.isNumber() && newData.val() >= 5 && newData.val() <= 16"
+          },
+          "maxPlayers": {
+            ".validate": "newData.isNumber() && newData.val() >= 2 && newData.val() <= 8"
+          },
+          "turnSeconds": {
+            ".validate": "newData.isNumber() && (newData.val() === 0 || (newData.val() >= 5 && newData.val() <= 600))"
+          }
+        },
+        "players": {
+          "$uid": {
+            ".write": "auth != null && (auth.uid === $uid || root.child('lobbies').child($code).child('hostId').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['name', 'colorIndex', 'joinedAt'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 24"
+            },
+            "colorIndex": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 7"
+            },
+            "joinedAt": {
+              ".validate": "newData.isNumber()"
+            }
+          }
+        },
+        "game": {
+          ".validate": "newData.val() === null || newData.hasChildren(['lines', 'boxes', 'scores', 'turnIndex', 'moveCount', 'finished'])",
+          "lines": {
+            "$edgeId": {
+              ".validate": "!data.exists() && newData.isNumber() && newData.val() >= 0 && newData.val() <= 7"
+            }
+          },
+          "turnIndex": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 7"
+          },
+          "moveCount": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "finished": {
+            ".validate": "newData.isBoolean()"
+          },
+          "turnStartedAt": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          }
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    }
+  }
+}

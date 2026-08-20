@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #1a1f2e;
+  --color-paper: #f3f5f8;
+  --color-mist: #e4e8ef;
+  --color-slate-line: #9aa3b5;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background:
+    radial-gradient(ellipse 120% 80% at 10% -10%, #dbe7ff 0%, transparent 50%),
+    radial-gradient(ellipse 100% 70% at 100% 0%, #ffe4d6 0%, transparent 45%),
+    linear-gradient(180deg, #f7f8fb 0%, #eef1f6 100%);
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes line-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes box-fill {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-turn {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, currentColor 35%, transparent),
+      0 0 0 0 color-mix(in srgb, currentColor 0%, transparent);
+    background-color: color-mix(in srgb, currentColor 4%, white);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, currentColor 55%, transparent),
+      0 0 14px 2px color-mix(in srgb, currentColor 18%, transparent);
+    background-color: color-mix(in srgb, currentColor 10%, white);
+  }
+}
+
+@keyframes turn-label {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out both;
+}
+
+.animate-box-fill {
+  animation: box-fill 0.28s ease-out both;
+}
+
+.animate-pulse-turn {
+  animation: pulse-turn 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: box-shadow, background-color;
+}
+
+.animate-turn-label {
+  animation: turn-label 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.board-frame {
+  overflow: hidden;
+  isolation: isolate;
+  contain: layout paint;
+  border-radius: 1rem;
+  background: #ffffff;
+}
+
+.board-svg {
+  display: block;
+  overflow: hidden;
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+  filter: none;
+}
+
+.board-dot {
+  pointer-events: none;
+  shape-rendering: geometricPrecision;
+}
+
+.board-line {
+  pointer-events: none;
+}
+
+.board-hover-line {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.board-edge:hover .board-hover-line,
+.board-edge:focus-within .board-hover-line {
+  opacity: 0.92;
+}
+
+.board-hit {
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.board-box {
+  pointer-events: none;
+  animation: box-fill 0.28s ease-out both;
+}
