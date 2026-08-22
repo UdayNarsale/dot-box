@@ -156,39 +156,50 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
   const isHost = online.uid === liveLobby.hostId
 
   if (liveLobby.status === 'waiting') {
+    const lobbyCodeDisplay = streamerMode ? '******' : (online.code ?? '')
+
     return (
       <ScreenPage>
         <ScreenScroll className="py-2">
           <ScreenCard
             title="Waiting room"
-            subtitle={
-              <>
-                Code{' '}
-                <span className="font-mono font-semibold tracking-widest" aria-hidden>
-                  ******
-                </span>
-              </>
-            }
+            subtitle="Invite friends with the join code below."
             headerAction={<GameSettingsMenu />}
           >
-            {isHost && (
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!online.code) return
-                  try {
-                    await navigator.clipboard.writeText(online.code)
-                    setCopied(true)
-                    setTimeout(() => setCopied(false), 1500)
-                  } catch {
-                    /* ignore */
-                  }
-                }}
-                className={btnRowHalf}
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/50 p-4 sm:p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center">
+                Join code
+              </p>
+              <p
+                className="mt-2 font-mono text-2xl sm:text-3xl font-bold tracking-[0.28em] sm:tracking-[0.35em] text-center text-[var(--color-ink)] select-all"
+                aria-label={streamerMode ? 'Join code hidden in streamer mode' : `Join code ${online.code}`}
               >
-                {copied ? 'Copied!' : 'Copy join code'}
-              </button>
-            )}
+                {lobbyCodeDisplay}
+              </p>
+              {streamerMode && (
+                <p className="mt-2 text-xs text-center text-slate-500 dark:text-slate-400">
+                  Hidden on screen — turn off streamer mode in Settings to show the code.
+                </p>
+              )}
+              {isHost && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!online.code) return
+                    try {
+                      await navigator.clipboard.writeText(online.code)
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 1500)
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                  className="mt-4 w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 py-3 text-sm font-semibold text-[var(--color-ink)] hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-[0.99]"
+                >
+                  {copied ? 'Copied to clipboard!' : 'Copy join code'}
+                </button>
+              )}
+            </div>
 
             {isHost ? (
               <div className="space-y-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 p-3 sm:p-4">
