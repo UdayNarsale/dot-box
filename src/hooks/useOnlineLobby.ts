@@ -10,6 +10,7 @@ import {
   reconnectLobby,
   resetLobbyGame,
   setPlayerColor,
+  setPlayerReady,
   applyTimeoutOnlineTurn,
   startLobbyGame,
   submitOnlineMove,
@@ -213,6 +214,18 @@ export function useOnlineLobby() {
     [code, uid],
   )
 
+  const setReady = useCallback(
+    async (ready: boolean) => {
+      if (!code || !uid) return
+      try {
+        await setPlayerReady(code, uid, ready)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to update ready status')
+      }
+    },
+    [code, uid],
+  )
+
   const start = useCallback(async () => {
     if (!code || !uid) return
     setBusy(true)
@@ -329,6 +342,7 @@ export function useOnlineLobby() {
     endLobby,
     saveSettings,
     assignColor,
+    setReady,
     start,
     playAgain,
     playEdge,

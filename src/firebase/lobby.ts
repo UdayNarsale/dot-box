@@ -108,6 +108,7 @@ export async function createLobby(
           name: hostName.trim() || 'Host',
           colorIndex: 0,
           joinedAt: Date.now(),
+          ready: false,
         },
       },
       seatOrder: [uid],
@@ -156,6 +157,7 @@ export async function joinLobby(
           name: name.trim() || `Player ${count + 1}`,
           colorIndex,
           joinedAt: Date.now(),
+          ready: false,
         },
       },
       seatOrder: [...current.seatOrder, uid],
@@ -245,6 +247,7 @@ export async function setPlayerColor(
       name: current.name,
       colorIndex,
       joinedAt: current.joinedAt,
+      ready: false,
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -257,18 +260,72 @@ export async function setPlayerColor(
   }
 }
 
+export async function setPlayerReady(
+  code: string,
+  uid: string,
+  ready: boolean,
+): Promise<void> {
+  const normalized = code.trim().toUpperCase()
+  const lobbyR = lobbyRef(normalized)
+  const playerR = playerRef(normalized, uid)
+
+  const snap = await get(lobbyR)
+  if (!snap.exists()) throw new Error('Lobby not found.')
+  const lobby = normalizeLobby(snap.val() as LobbyState)
+  if (lobby.status !== 'waiting') {
+    throw new Error('Ready status can only be changed in the waiting room.')
+  }
+  if (!lobby.players[uid]) {
+    throw new Error('You are not in this lobby.')
+  }
+
+  const current = lobby.players[uid]!
+  try {
+    await update(playerR, {
+      name: current.name,
+      colorIndex: current.colorIndex,
+      joinedAt: current.joinedAt,
+      ready,
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (/permission_denied/i.test(msg)) {
+      throw new Error(
+        'Could not update ready status — publish the latest database.rules.json in the Firebase console.',
+      )
+    }
+    throw e
+  }
+}
+
 export async function updateLobbySettings(
   code: string,
   uid: string,
   settings: LobbySettings,
 ): Promise<void> {
   const r = lobbyRef(code)
-  const snap = await get(r)
-  const lobby = snap.val() as LobbyState | null
-  if (!lobby || lobby.hostId !== uid || lobby.status !== 'waiting') {
+  const result = await runTransaction(r, (current: LobbyState | null) => {
+    if (!current || current.hostId !== uid || current.status !== 'waiting') return
+
+    const players = { ...current.players }
+    for (const id of Object.keys(players)) {
+      players[id] = { ...players[id]!, ready: false }
+    }
+
+    return {
+      ...current,
+      settings: {
+        dots: settings.dots,
+        maxPlayers: settings.maxPlayers,
+        turnSeconds: settings.turnSeconds ?? 0,
+      },
+      players,
+    }
+  })
+
+  if (!result.committed) {
     throw new Error('Only the host can change settings before the game starts.')
   }
-  await update(r, { settings })
 }
 
 export async function startLobbyGame(code: string, uid: string): Promise<void> {
@@ -281,6 +338,9 @@ export async function startLobbyGame(code: string, uid: string): Promise<void> {
 
     const colors = current.seatOrder.map((id) => current.players[id]?.colorIndex)
     if (new Set(colors).size !== colors.length) return
+
+    const allReady = current.seatOrder.every((id) => current.players[id]?.ready === true)
+    if (!allReady) return
 
     const fresh = createGame(current.settings.dots, current.seatOrder.length)
     const firstPlayer = current.seatOrder[0]!
@@ -302,7 +362,9 @@ export async function startLobbyGame(code: string, uid: string): Promise<void> {
       game,
     }
   }).then((res) => {
-    if (!res.committed) throw new Error('Could not start. Need at least 2 players and host permission.')
+    if (!res.committed) {
+      throw new Error('Could not start. Need at least 2 players, unique colors, all ready, and host permission.')
+    }
   })
 }
 

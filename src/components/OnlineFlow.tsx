@@ -157,6 +157,8 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
 
   if (liveLobby.status === 'waiting') {
     const lobbyCodeDisplay = streamerMode ? '******' : (online.code ?? '')
+    const allReady = liveLobby.seatOrder.every((id) => liveLobby.players[id]?.ready === true)
+    const readyCount = liveLobby.seatOrder.filter((id) => liveLobby.players[id]?.ready === true).length
 
     return (
       <ScreenPage>
@@ -208,7 +210,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
               <section className="space-y-3 min-w-0">
                 <h3 className="text-sm font-semibold text-[var(--color-ink)]">Players</h3>
                 <ul className="space-y-3">
-                  {liveLobby.seatOrder.map((id, i) => {
+                  {liveLobby.seatOrder.map((id) => {
                     const p = liveLobby.players[id]!
                     const color = PLAYER_COLORS[p.colorIndex % PLAYER_COLORS.length]!
                     const takenBy = colorsTakenBy(
@@ -230,7 +232,25 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
                             {id === liveLobby.hostId ? ' · Host' : ''}
                             {id === online.uid ? ' · You' : ''}
                           </span>
-                          <span className="text-xs text-slate-400 shrink-0">P{i + 1}</span>
+                          {id === online.uid ? (
+                            <button
+                              type="button"
+                              onClick={() => void online.setReady(!p.ready)}
+                              className={
+                                p.ready
+                                  ? 'shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 transition'
+                                  : 'shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 transition'
+                              }
+                            >
+                              {p.ready ? 'Ready ✓' : 'Ready up'}
+                            </button>
+                          ) : (
+                            <span
+                              className={`shrink-0 text-xs font-medium ${p.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}
+                            >
+                              {p.ready ? 'Ready' : 'Not ready'}
+                            </span>
+                          )}
                         </div>
                         {id === online.uid ? (
                           <ColorPicker
@@ -248,8 +268,11 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
                 </ul>
 
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  {liveLobby.seatOrder.length}/{liveLobby.settings.maxPlayers} players · need at least 2 to
-                  start. Each player picks a unique color before the host starts.
+                  {liveLobby.seatOrder.length}/{liveLobby.settings.maxPlayers} players · {readyCount}/
+                  {liveLobby.seatOrder.length} ready
+                  {liveLobby.seatOrder.length >= 2 && !allReady ? ' · waiting for everyone to ready up' : ''}
+                  {liveLobby.seatOrder.length < 2 ? ' · need at least 2 to start' : ''}. Each player picks a
+                  unique color, then taps Ready.
                 </p>
               </section>
 
@@ -297,7 +320,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
               {isHost && (
                 <button
                   type="button"
-                  disabled={online.busy || liveLobby.seatOrder.length < 2}
+                  disabled={online.busy || liveLobby.seatOrder.length < 2 || !allReady}
                   onClick={() => void online.start()}
                   className={`${btnRowPrimary} lg:max-w-[12rem]`}
                 >

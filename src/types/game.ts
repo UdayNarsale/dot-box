@@ -80,6 +80,8 @@ export interface LobbyPlayer {
   name: string
   colorIndex: number
   joinedAt: number
+  /** Waiting-room ready flag; all players must be ready before the host can start. */
+  ready?: boolean
 }
 
 export interface LobbyGame {

@@ -28,7 +28,7 @@
         "players": {
           "$uid": {
             ".write": "auth != null && (auth.uid === $uid || root.child('lobbies').child($code).child('hostId').val() === auth.uid)",
-            ".validate": "newData.hasChildren(['name', 'colorIndex', 'joinedAt'])",
+            ".validate": "newData.hasChildren(['name', 'colorIndex', 'joinedAt']) && (!newData.hasChild('ready') || newData.child('ready').isBoolean())",
             "name": {
               ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 24"
             },
@@ -38,6 +38,10 @@
             },
             "joinedAt": {
               ".validate": "newData.isNumber()"
+            },
+            "ready": {
+              ".write": "auth != null && auth.uid === $uid && root.child('lobbies').child($code).child('status').val() === 'waiting'",
+              ".validate": "newData.isBoolean()"
             }
           }
         },
