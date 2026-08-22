@@ -160,27 +160,30 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
 
     return (
       <ScreenPage>
-        <ScreenScroll className="py-2">
+        <ScreenScroll wide className="py-2">
           <ScreenCard
+            wide
             title="Waiting room"
             subtitle="Invite friends with the join code below."
             headerAction={<GameSettingsMenu />}
           >
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/50 p-4 sm:p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center">
-                Join code
-              </p>
-              <p
-                className="mt-2 font-mono text-2xl sm:text-3xl font-bold tracking-[0.28em] sm:tracking-[0.35em] text-center text-[var(--color-ink)] select-all"
-                aria-label={streamerMode ? 'Join code hidden in streamer mode' : `Join code ${online.code}`}
-              >
-                {lobbyCodeDisplay}
-              </p>
-              {streamerMode && (
-                <p className="mt-2 text-xs text-center text-slate-500 dark:text-slate-400">
-                  Hidden on screen — turn off streamer mode in Settings to show the code.
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/50 p-4 sm:p-5 lg:flex lg:items-center lg:justify-between lg:gap-8">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center lg:text-left">
+                  Join code
                 </p>
-              )}
+                <p
+                  className="mt-2 font-mono text-2xl sm:text-3xl lg:text-4xl font-bold tracking-[0.28em] sm:tracking-[0.35em] text-center lg:text-left text-[var(--color-ink)] select-all"
+                  aria-label={streamerMode ? 'Join code hidden in streamer mode' : `Join code ${online.code}`}
+                >
+                  {lobbyCodeDisplay}
+                </p>
+                {streamerMode && (
+                  <p className="mt-2 text-xs text-center lg:text-left text-slate-500 dark:text-slate-400">
+                    Hidden on screen — turn off streamer mode in Settings to show the code.
+                  </p>
+                )}
+              </div>
               {isHost && (
                 <button
                   type="button"
@@ -194,99 +197,109 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
                       /* ignore */
                     }
                   }}
-                  className="mt-4 w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 py-3 text-sm font-semibold text-[var(--color-ink)] hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-[0.99]"
+                  className="mt-4 lg:mt-0 w-full lg:w-auto lg:min-w-[11rem] shrink-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 py-3 px-5 text-sm font-semibold text-[var(--color-ink)] hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-[0.99]"
                 >
                   {copied ? 'Copied to clipboard!' : 'Copy join code'}
                 </button>
               )}
             </div>
 
-            {isHost ? (
-              <div className="space-y-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 p-3 sm:p-4">
-                <NumberSelect
-                  label="Dots per side"
-                  value={liveLobby.settings.dots}
-                  min={MIN_DOTS}
-                  max={MAX_DOTS}
-                  onChange={(d) => void online.saveSettings({ ...liveLobby.settings, dots: d })}
-                />
-                <NumberSelect
-                  label="Max players"
-                  value={liveLobby.settings.maxPlayers}
-                  min={MIN_PLAYERS}
-                  max={MAX_PLAYERS}
-                  onChange={(m) => void online.saveSettings({ ...liveLobby.settings, maxPlayers: m })}
-                />
-                <TimerSelect
-                  seconds={liveLobby.settings.turnSeconds ?? 0}
-                  onChange={(s) => void online.saveSettings({ ...liveLobby.settings, turnSeconds: s })}
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-slate-600 dark:text-slate-400 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 px-3 py-2.5">
-                Turn timer:{' '}
-                <span className="font-medium">
-                  {liveLobby.settings.turnSeconds
-                    ? `${liveLobby.settings.turnSeconds}s per turn`
-                    : 'Off'}
-                </span>
-              </p>
-            )}
+            <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+              <section className="space-y-3 min-w-0">
+                <h3 className="text-sm font-semibold text-[var(--color-ink)]">Players</h3>
+                <ul className="space-y-3">
+                  {liveLobby.seatOrder.map((id, i) => {
+                    const p = liveLobby.players[id]!
+                    const color = PLAYER_COLORS[p.colorIndex % PLAYER_COLORS.length]!
+                    const takenBy = colorsTakenBy(
+                      liveLobby.seatOrder.flatMap((otherId, seatIdx) =>
+                        otherId === id
+                          ? []
+                          : [{ colorIndex: liveLobby.players[otherId]!.colorIndex, seatIndex: seatIdx }],
+                      ),
+                    )
+                    return (
+                      <li
+                        key={id}
+                        className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 px-3 py-3 space-y-2"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="size-2.5 rounded-full shrink-0" style={{ background: color.stroke }} />
+                          <span className="text-sm font-medium flex-1 truncate text-left">
+                            {p.name}
+                            {id === liveLobby.hostId ? ' · Host' : ''}
+                            {id === online.uid ? ' · You' : ''}
+                          </span>
+                          <span className="text-xs text-slate-400 shrink-0">P{i + 1}</span>
+                        </div>
+                        {id === online.uid ? (
+                          <ColorPicker
+                            label="Your color"
+                            value={p.colorIndex}
+                            takenBy={takenBy}
+                            onChange={(ci) => void online.assignColor(ci)}
+                          />
+                        ) : (
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{color.name}</p>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
 
-            <ul className="space-y-3">
-              {liveLobby.seatOrder.map((id, i) => {
-                const p = liveLobby.players[id]!
-                const color = PLAYER_COLORS[p.colorIndex % PLAYER_COLORS.length]!
-                const takenBy = colorsTakenBy(
-                  liveLobby.seatOrder.flatMap((otherId, seatIdx) =>
-                    otherId === id
-                      ? []
-                      : [{ colorIndex: liveLobby.players[otherId]!.colorIndex, seatIndex: seatIdx }],
-                  ),
-                )
-                return (
-                  <li
-                    key={id}
-                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 px-3 py-3 space-y-2"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="size-2.5 rounded-full shrink-0" style={{ background: color.stroke }} />
-                      <span className="text-sm font-medium flex-1 truncate text-left">
-                        {p.name}
-                        {id === liveLobby.hostId ? ' · Host' : ''}
-                        {id === online.uid ? ' · You' : ''}
-                      </span>
-                      <span className="text-xs text-slate-400 shrink-0">P{i + 1}</span>
-                    </div>
-                    {id === online.uid ? (
-                      <ColorPicker
-                        label="Your color"
-                        value={p.colorIndex}
-                        takenBy={takenBy}
-                        onChange={(ci) => void online.assignColor(ci)}
-                      />
-                    ) : (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{color.name}</p>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {liveLobby.seatOrder.length}/{liveLobby.settings.maxPlayers} players · need at least 2 to
+                  start. Each player picks a unique color before the host starts.
+                </p>
+              </section>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              {liveLobby.seatOrder.length}/{liveLobby.settings.maxPlayers} players · need at least 2 to
-              start. Each player picks a unique color before the host starts.
-            </p>
+              <section className="space-y-3 min-w-0 mt-1 lg:mt-0">
+                <h3 className="text-sm font-semibold text-[var(--color-ink)]">
+                  {isHost ? 'Lobby settings' : 'Game settings'}
+                </h3>
+                {isHost ? (
+                  <div className="space-y-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 p-3 sm:p-4">
+                    <NumberSelect
+                      label="Dots per side"
+                      value={liveLobby.settings.dots}
+                      min={MIN_DOTS}
+                      max={MAX_DOTS}
+                      onChange={(d) => void online.saveSettings({ ...liveLobby.settings, dots: d })}
+                    />
+                    <NumberSelect
+                      label="Max players"
+                      value={liveLobby.settings.maxPlayers}
+                      min={MIN_PLAYERS}
+                      max={MAX_PLAYERS}
+                      onChange={(m) => void online.saveSettings({ ...liveLobby.settings, maxPlayers: m })}
+                    />
+                    <TimerSelect
+                      seconds={liveLobby.settings.turnSeconds ?? 0}
+                      onChange={(s) => void online.saveSettings({ ...liveLobby.settings, turnSeconds: s })}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-600 dark:text-slate-400 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 px-3 py-2.5">
+                    Turn timer:{' '}
+                    <span className="font-medium">
+                      {liveLobby.settings.turnSeconds
+                        ? `${liveLobby.settings.turnSeconds}s per turn`
+                        : 'Off'}
+                    </span>
+                  </p>
+                )}
+              </section>
+            </div>
 
             {online.error && <ErrorBanner>{online.error}</ErrorBanner>}
 
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2.5 pt-1 lg:flex-row lg:justify-end lg:gap-3 lg:border-t lg:border-slate-100 lg:dark:border-slate-800 lg:pt-5">
               {isHost && (
                 <button
                   type="button"
                   disabled={online.busy || liveLobby.seatOrder.length < 2}
                   onClick={() => void online.start()}
-                  className={btnRowPrimary}
+                  className={`${btnRowPrimary} lg:max-w-[12rem]`}
                 >
                   Start game
                 </button>
@@ -296,7 +309,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
                 onClick={() => {
                   void (isHost ? online.endLobby() : online.leave()).then(() => onExit())
                 }}
-                className={btnRowHalf}
+                className={`${btnRowHalf} lg:max-w-[12rem]`}
               >
                 {isHost ? 'End lobby' : 'Leave'}
               </button>

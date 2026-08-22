@@ -20,9 +20,20 @@ export function ScreenPage({
 }
 
 /** Scrollable column for long forms on small phones. */
-export function ScreenScroll({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function ScreenScroll({
+  children,
+  className = '',
+  wide = false,
+}: {
+  children: ReactNode
+  className?: string
+  /** Wider max width on lg+ screens (e.g. waiting room two-column layout). */
+  wide?: boolean
+}) {
   return (
-    <div className={`w-full max-w-md mx-auto flex-1 min-h-0 overflow-y-auto overscroll-contain ${className}`}>
+    <div
+      className={`w-full mx-auto flex-1 min-h-0 overflow-y-auto overscroll-contain ${wide ? 'max-w-md lg:max-w-4xl' : 'max-w-md'} ${className}`}
+    >
       {children}
     </div>
   )
@@ -34,12 +45,20 @@ interface ScreenCardProps {
   subtitle?: ReactNode
   headerAction?: ReactNode
   className?: string
+  wide?: boolean
 }
 
-export function ScreenCard({ children, title, subtitle, headerAction, className = '' }: ScreenCardProps) {
+export function ScreenCard({
+  children,
+  title,
+  subtitle,
+  headerAction,
+  className = '',
+  wide = false,
+}: ScreenCardProps) {
   return (
     <div
-      className={`w-full max-w-md mx-auto rounded-2xl bg-white/85 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 p-4 sm:p-6 shadow-sm space-y-4 sm:space-y-5 ${className}`}
+      className={`w-full mx-auto rounded-2xl bg-white/85 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 p-4 sm:p-6 shadow-sm space-y-4 sm:space-y-5 ${wide ? 'max-w-md lg:max-w-4xl' : 'max-w-md'} ${className}`}
     >
       <div className="flex items-start justify-between gap-3 pr-1">
         <div className="min-w-0">
