@@ -12,7 +12,7 @@ export function ScreenPage({
 }) {
   return (
     <main
-      className={`min-h-dvh flex flex-col animate-fade-in px-4 sm:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] ${center ? 'items-center justify-center' : ''} ${className}`}
+      className={`min-h-dvh max-h-dvh flex flex-col overflow-hidden animate-fade-in px-4 sm:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] ${center ? 'items-center justify-center' : ''} ${className}`}
     >
       {children}
     </main>
@@ -32,7 +32,31 @@ export function ScreenScroll({
 }) {
   return (
     <div
-      className={`w-full mx-auto flex-1 min-h-0 overflow-y-auto overscroll-contain ${wide ? 'max-w-md lg:max-w-4xl' : 'max-w-md'} ${className}`}
+      className={`w-full mx-auto flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y ${wide ? 'max-w-md lg:max-w-4xl' : 'max-w-md'} ${className}`}
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** Bordered inner panel — matches local game setup cards. */
+export const lobbySectionClass =
+  'space-y-2 rounded-xl border border-slate-100 dark:border-slate-700 p-3 sm:p-4'
+
+/** Sticky-style action row below a scrollable lobby (Start / Back). */
+export function LobbyActions({
+  children,
+  wide = false,
+  className = '',
+}: {
+  children: ReactNode
+  wide?: boolean
+  className?: string
+}) {
+  return (
+    <div
+      className={`shrink-0 w-full mx-auto pt-3 mt-auto border-t border-slate-100/90 dark:border-slate-800/90 ${wide ? 'max-w-md lg:max-w-4xl' : 'max-w-md'} ${className}`}
     >
       {children}
     </div>

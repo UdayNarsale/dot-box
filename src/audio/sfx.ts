@@ -4,7 +4,7 @@
  */
 
 import { isMusicEnabled } from '../preferences/gamePreferences'
-import { getAudioContext, getAudioDestination, resumeAudioContext } from './context'
+import { duckBgmForSfx, getAudioContext, getAudioDestination, resumeAudioContext } from './context'
 
 async function resume() {
   await resumeAudioContext()
@@ -21,6 +21,7 @@ function tone(
   const c = getAudioContext()
   const dest = getAudioDestination()
   if (!c || !dest) return
+  duckBgmForSfx()
   const t0 = c.currentTime + when
   const osc = c.createOscillator()
   const g = c.createGain()

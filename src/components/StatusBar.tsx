@@ -21,6 +21,8 @@ interface StatusBarProps {
   timerUrgent?: boolean
   /** When true, show "…" instead of 0s while the turn skip syncs. */
   timerPending?: boolean
+  /** When set (5…1), shows a large urgent count in the timer badge. */
+  countdownSec?: number | null
 }
 
 export function StatusBar({
@@ -36,6 +38,7 @@ export function StatusBar({
   timerSeconds = null,
   timerUrgent = false,
   timerPending = false,
+  countdownSec = null,
 }: StatusBarProps) {
   const [confirm, setConfirm] = useState<'leave' | 'restart' | null>(null)
 
@@ -59,17 +62,27 @@ export function StatusBar({
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {timerSeconds !== null && timerSeconds !== undefined && (
               <div
-                className={`rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold tabular-nums border transition-colors ${
-                  timerUrgent
+                className={`rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold tabular-nums border transition-colors min-w-[3.25rem] sm:min-w-[3.5rem] text-center ${
+                  countdownSec !== null && countdownSec > 0
+                    ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+                    : timerUrgent
                     ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
                     : timerPending
                       ? 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
                       : 'bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
                 }`}
-                aria-live="polite"
+                aria-live="assertive"
                 title="Time left this turn"
               >
-                {timerPending ? '…' : `${timerSeconds}s`}
+                {countdownSec !== null && countdownSec > 0 ? (
+                  <span key={countdownSec} className="turn-countdown-badge inline-block tabular-nums">
+                    {countdownSec}
+                  </span>
+                ) : timerPending ? (
+                  '…'
+                ) : (
+                  `${timerSeconds}s`
+                )}
               </div>
             )}
             {(onLeave || onRestart) && (

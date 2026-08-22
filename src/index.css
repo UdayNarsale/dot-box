@@ -190,3 +190,35 @@ html.dark .board-hover-line {
   pointer-events: none;
   animation: box-fill 0.28s ease-out both;
 }
+
+.turn-page-flash {
+  background: rgb(239 68 68 / 0.22);
+  animation: turn-page-flash 0.95s ease-out forwards;
+}
+
+.turn-countdown-badge {
+  font-size: 1.125rem;
+  font-weight: 800;
+  line-height: 1;
+  animation: countdown-pop 0.55s ease-out both;
+}
+
+@keyframes turn-page-flash {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes countdown-pop {
+  0% {
+    transform: scale(1.35);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

@@ -1,4 +1,5 @@
 import { PLAYER_COLORS } from '../types/game'
+import { WinCelebration } from './WinCelebration'
 
 interface EndModalProps {
   open: boolean
@@ -24,7 +25,9 @@ export function EndModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-fade-in">
+    <>
+      <WinCelebration />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-fade-in">
       <div
         role="dialog"
         aria-modal="true"
@@ -64,5 +67,6 @@ export function EndModal({
         </div>
       </div>
     </div>
+    </>
   )
 }

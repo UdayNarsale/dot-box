@@ -4,7 +4,7 @@
  */
 
 import { isMusicEnabled, subscribeGamePreferences } from '../preferences/gamePreferences'
-import { getAudioContext, getAudioDestination, onAudioUnlocked, resumeAudioContext } from './context'
+import { getAudioContext, getBgmDestination, onAudioUnlocked, resumeAudioContext } from './context'
 
 export type MusicPhase = 'smooth' | 'intense' | 'peak'
 type BgmTarget = 'ambient' | MusicPhase
@@ -246,7 +246,7 @@ class BgmEngine {
     this.filter.Q.value = 0.6
     this.master.gain.setValueAtTime(0.0001, c.currentTime)
     this.filter.connect(this.master)
-    const dest = getAudioDestination()
+    const dest = getBgmDestination()
     if (!dest) return
     this.master.connect(dest)
 

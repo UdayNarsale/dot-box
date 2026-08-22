@@ -88,6 +88,11 @@ export function useTurnTimer({
     enabled: Boolean(turnSeconds && turnSeconds > 0 && turnStartedAt && !finished),
     remainingMs,
     remainingSec,
+    /** Large on-board overlay count (5…1) during the last seconds of your turn. */
+    countdownSec:
+      canExpire && remainingSec !== null && remainingSec > 0 && remainingSec <= 5
+        ? remainingSec
+        : null,
     /** Opponent's turn hit 0 — waiting for server sync (don't flash urgent red). */
     waitingSync: expired && !canExpire,
     urgency: canExpire && remainingSec !== null && remainingSec > 0 && remainingSec <= 5,

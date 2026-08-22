@@ -4,6 +4,7 @@ import { getVolumeMultiplier, subscribeGamePreferences } from '../preferences/ga
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
+let bgmBusGain: GainNode | null = null
 let unlocked = false
 const unlockListeners = new Set<() => void>()
 
@@ -43,6 +44,37 @@ export function getAudioDestination(): AudioNode | null {
     masterGain.connect(c.destination)
   }
   return masterGain
+}
+
+/** BGM routes through a separate bus so SFX can duck music without affecting clicks. */
+export function getBgmDestination(): AudioNode | null {
+  const c = getAudioContext()
+  const master = getAudioDestination()
+  if (!c || !master) return null
+  if (!bgmBusGain) {
+    bgmBusGain = c.createGain()
+    bgmBusGain.gain.value = 1
+    bgmBusGain.connect(master)
+  }
+  return bgmBusGain
+}
+
+/** Briefly lower BGM while a gameplay SFX plays so clicks/box chimes stay clear. */
+export function duckBgmForSfx(
+  depth = 0.28,
+  attackSec = 0.025,
+  holdSec = 0.1,
+  releaseSec = 0.45,
+): void {
+  const c = getAudioContext()
+  const bus = getBgmDestination()
+  if (!c || !bus || !(bus instanceof GainNode)) return
+  const t = c.currentTime
+  const g = bus.gain
+  g.cancelScheduledValues(t)
+  g.setValueAtTime(g.value, t)
+  g.linearRampToValueAtTime(depth, t + attackSec)
+  g.linearRampToValueAtTime(1, t + attackSec + holdSec + releaseSec)
 }
 
 export function applyMasterVolume(): void {
