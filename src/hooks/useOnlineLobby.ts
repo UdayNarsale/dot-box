@@ -37,6 +37,8 @@ export function useOnlineLobby() {
   const lastBoxCountRef = useRef(0)
   const lastLineCountRef = useRef(0)
   const selfMoveRef = useRef(0)
+  /** True once we have received at least one snapshot for the current lobby code. */
+  const lobbyLoadedRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -68,11 +70,15 @@ export function useOnlineLobby() {
   }, [])
 
   useEffect(() => {
+    lobbyLoadedRef.current = false
     if (!code) {
       setLobby(null)
       return
     }
-    const unsub = subscribeLobby(code, setLobby)
+    const unsub = subscribeLobby(code, (next) => {
+      lobbyLoadedRef.current = true
+      setLobby(next)
+    })
     return unsub
   }, [code])
 
@@ -80,9 +86,13 @@ export function useOnlineLobby() {
   useEffect(() => {
     if (!code || restoring) return
     if (lobby === null) {
-      clearSession()
-      setCode(null)
-      setUid(null)
+      // Null before the first snapshot is normal (e.g. right after create/join).
+      if (lobbyLoadedRef.current) {
+        clearSession()
+        setCode(null)
+        setUid(null)
+        lobbyLoadedRef.current = false
+      }
       return
     }
     if (uid && !lobby.players[uid]) {
@@ -90,6 +100,7 @@ export function useOnlineLobby() {
       setCode(null)
       setUid(null)
       setLobby(null)
+      lobbyLoadedRef.current = false
       setError('You were removed from the lobby.')
     }
   }, [lobby, code, uid, restoring])
