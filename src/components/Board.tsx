@@ -197,8 +197,6 @@ export function Board({
               cx={pad + c * cell}
               cy={pad + r * cell}
               r={dotR}
-              fill="#111827"
-              stroke="#111827"
               strokeWidth={1.15}
               className="board-dot"
             />

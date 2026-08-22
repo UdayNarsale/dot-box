@@ -158,6 +158,13 @@ html.dark .board-frame {
 .board-dot {
   pointer-events: none;
   shape-rendering: geometricPrecision;
+  fill: #111827;
+  stroke: #111827;
+}
+
+html.dark .board-dot {
+  fill: #f8fafc;
+  stroke: #e2e8f0;
 }
 
 .board-line {
