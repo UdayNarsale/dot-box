@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { PLAYER_COLORS } from '../types/game'
 import { useOnlineLobby } from '../hooks/useOnlineLobby'
+import { useGameMusic } from '../hooks/useGameMusic'
 import { useTurnTimer } from '../hooks/useTurnTimer'
 import { Board } from './Board'
-import { ColorPicker } from './ColorPicker'
+import { ColorPicker, colorsTakenBy } from './ColorPicker'
 import { EndModal } from './EndModal'
+import { GameBoardLayout } from './PlayerCard'
+import { useGamePreferences } from '../hooks/useGamePreferences'
+import { streamerPlayerLabel, streamerSubtitle } from '../utils/streamerDisplay'
 import {
   MAX_DOTS,
   MAX_PLAYERS,
@@ -15,6 +19,7 @@ import {
 } from './FormControls'
 import { StatusBar } from './StatusBar'
 import { TimerSelect } from './TimerSelect'
+import { GameSettingsMenu } from './GameSettingsMenu'
 
 interface OnlineFlowProps {
   intent: 'create' | 'join'
@@ -23,6 +28,7 @@ interface OnlineFlowProps {
 
 export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
   const online = useOnlineLobby()
+  const { streamerMode } = useGamePreferences()
   const [name, setName] = useState('')
   const [dots, setDots] = useState(5)
   const [maxPlayers, setMaxPlayers] = useState(4)
@@ -34,11 +40,21 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
   const game = online.game
   const turnSecs = lobby?.settings.turnSeconds ?? 0
 
+  const playing = Boolean(
+    lobby?.status === 'playing' && game && !game.finished,
+  )
+  useGameMusic(playing, game ?? undefined)
+
+  const myTurnEarly =
+    Boolean(game && !game.finished && online.uid && lobby?.status === 'playing') &&
+    lobby?.seatOrder?.[game!.turnIndex] === online.uid
+
   const timer = useTurnTimer({
     turnSeconds: turnSecs,
     turnStartedAt: lobby?.game?.turnStartedAt ?? null,
     turnKey: game ? `${game.turnIndex}-${game.moveCount}` : 'idle',
     finished: !game || game.finished || lobby?.status !== 'playing',
+    canExpire: myTurnEarly,
     onExpire: () => {
       void online.expireTurn()
     },
@@ -46,15 +62,26 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
 
   const inLobby = Boolean(online.code && online.lobby)
 
+  if (online.restoring) {
+    return (
+      <main className="min-h-full flex items-center justify-center p-6 animate-fade-in">
+        <p className="text-slate-600 dark:text-slate-400">Reconnecting to lobby…</p>
+      </main>
+    )
+  }
+
   if (!inLobby) {
     return (
       <main className="min-h-full flex items-center justify-center p-6 animate-fade-in">
-        <div className="w-full max-w-md rounded-2xl bg-white/80 border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="w-full max-w-md rounded-2xl bg-white/80 dark:bg-slate-900/85 border border-slate-200 dark:border-slate-700 p-6 shadow-sm space-y-5 relative">
+          <div className="absolute top-4 right-4">
+            <GameSettingsMenu />
+          </div>
           <div>
             <h2 className="text-2xl font-semibold">
               {intent === 'create' ? 'Create lobby' : 'Join lobby'}
             </h2>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
               {intent === 'create'
                 ? 'Share the code with friends so they can join from any device.'
                 : 'Enter the host’s 6-character code.'}
@@ -93,7 +120,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
           )}
 
           {online.error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+            <p className="text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-xl px-3 py-2">
               {online.error}
             </p>
           )}
@@ -102,7 +129,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
             <button
               type="button"
               onClick={onExit}
-              className="flex-1 rounded-xl border border-slate-200 py-3 font-medium hover:bg-slate-50"
+              className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 py-3 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Back
             </button>
@@ -116,7 +143,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
                   void online.join(joinCode, name)
                 }
               }}
-              className="flex-1 rounded-xl bg-[var(--color-ink)] text-white py-3 font-medium hover:opacity-90 disabled:opacity-50"
+              className="flex-1 rounded-xl bg-[var(--color-btn)] text-[var(--color-btn-fg)] py-3 font-medium hover:opacity-90 disabled:opacity-50"
             >
               {online.busy ? 'Please wait…' : intent === 'create' ? 'Create' : 'Join'}
             </button>
@@ -132,36 +159,44 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
   if (liveLobby.status === 'waiting') {
     return (
       <main className="min-h-full flex items-center justify-center p-6 animate-fade-in">
-        <div className="w-full max-w-md rounded-2xl bg-white/80 border border-slate-200 p-6 shadow-sm space-y-5">
-          <div>
-            <h2 className="text-2xl font-semibold">Waiting room</h2>
-            <p className="text-sm text-slate-600 mt-1">
-              Code{' '}
-              <span className="font-mono font-semibold tracking-widest text-[var(--color-ink)]">
-                {online.code}
-              </span>
-            </p>
+        <div className="w-full max-w-md rounded-2xl bg-white/80 dark:bg-slate-900/85 border border-slate-200 dark:border-slate-700 p-6 shadow-sm space-y-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-semibold">Waiting room</h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                Code{' '}
+                <span
+                  className="font-mono font-semibold tracking-widest text-[var(--color-ink)]"
+                  aria-hidden
+                >
+                  ******
+                </span>
+              </p>
+            </div>
+            <GameSettingsMenu />
           </div>
 
-          <button
-            type="button"
-            onClick={async () => {
-              if (!online.code) return
-              try {
-                await navigator.clipboard.writeText(online.code)
-                setCopied(true)
-                setTimeout(() => setCopied(false), 1500)
-              } catch {
-                /* ignore */
-              }
-            }}
-            className="w-full rounded-xl border border-slate-200 py-3 font-medium hover:bg-slate-50"
-          >
-            {copied ? 'Copied!' : 'Copy join code'}
-          </button>
+          {isHost && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!online.code) return
+                try {
+                  await navigator.clipboard.writeText(online.code)
+                  setCopied(true)
+                  setTimeout(() => setCopied(false), 1500)
+                } catch {
+                  /* ignore */
+                }
+              }}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 py-3 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              {copied ? 'Copied!' : 'Copy join code'}
+            </button>
+          )}
 
           {isHost ? (
-            <div className="space-y-4 rounded-xl bg-slate-50 border border-slate-100 p-4">
+            <div className="space-y-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 p-4">
               <NumberSelect
                 label="Dots per side"
                 value={liveLobby.settings.dots}
@@ -182,7 +217,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
               />
             </div>
           ) : (
-            <p className="text-sm text-slate-600 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 px-3 py-2">
               Turn timer:{' '}
               <span className="font-medium">
                 {liveLobby.settings.turnSeconds
@@ -196,13 +231,17 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
             {liveLobby.seatOrder.map((id, i) => {
               const p = liveLobby.players[id]!
               const color = PLAYER_COLORS[p.colorIndex % PLAYER_COLORS.length]!
-              const taken = liveLobby.seatOrder
-                .filter((other) => other !== id)
-                .map((other) => liveLobby.players[other]!.colorIndex)
+              const takenBy = colorsTakenBy(
+                liveLobby.seatOrder.flatMap((otherId, seatIdx) =>
+                  otherId === id
+                    ? []
+                    : [{ colorIndex: liveLobby.players[otherId]!.colorIndex, seatIndex: seatIdx }],
+                ),
+              )
               return (
                 <li
                   key={id}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-3 space-y-2"
+                  className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 px-3 py-3 space-y-2"
                 >
                   <div className="flex items-center gap-3">
                     <span className="size-2.5 rounded-full" style={{ background: color.stroke }} />
@@ -213,12 +252,12 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
                     </span>
                     <span className="text-xs text-slate-400">P{i + 1}</span>
                   </div>
-                  {isHost ? (
+                  {id === online.uid ? (
                     <ColorPicker
-                      label={`Color for ${p.name}`}
+                      label="Your color"
                       value={p.colorIndex}
-                      taken={taken}
-                      onChange={(ci) => void online.assignColor(id, ci)}
+                      takenBy={takenBy}
+                      onChange={(ci) => void online.assignColor(ci)}
                     />
                   ) : (
                     <p className="text-xs text-slate-500">{color.name}</p>
@@ -230,11 +269,11 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
 
           <p className="text-xs text-slate-500">
             {liveLobby.seatOrder.length}/{liveLobby.settings.maxPlayers} players · need at least 2 to
-            start. Each player must have a unique color.
+            start. Each player picks a unique color before the host starts.
           </p>
 
           {online.error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+            <p className="text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-xl px-3 py-2">
               {online.error}
             </p>
           )}
@@ -245,7 +284,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
                 type="button"
                 disabled={online.busy || liveLobby.seatOrder.length < 2}
                 onClick={() => void online.start()}
-                className="w-full rounded-xl bg-[var(--color-ink)] text-white py-3 font-medium hover:opacity-90 disabled:opacity-50"
+                className="w-full rounded-xl bg-[var(--color-btn)] text-[var(--color-btn-fg)] py-3 font-medium hover:opacity-90 disabled:opacity-50"
               >
                 Start game
               </button>
@@ -255,7 +294,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
               onClick={() => {
                 void (isHost ? online.endLobby() : online.leave()).then(() => onExit())
               }}
-              className="w-full rounded-xl border border-slate-200 py-3 font-medium hover:bg-slate-50"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 py-3 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               {isHost ? 'End lobby' : 'Leave'}
             </button>
@@ -269,11 +308,11 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
     return (
       <main className="min-h-full flex items-center justify-center p-6">
         <div className="text-center space-y-3">
-          <p className="text-slate-600">
+          <p className="text-slate-600 dark:text-slate-400">
             {liveLobby.status === 'playing' ? 'Starting game…' : 'Loading board…'}
           </p>
           {online.error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+            <p className="text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-xl px-3 py-2">
               {online.error}
             </p>
           )}
@@ -285,8 +324,10 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
   const playGame = online.game
   const statusPlayers = (liveLobby.seatOrder ?? []).map((id, i) => {
     const p = liveLobby.players?.[id]
+    const rawName = p?.name ?? `Player ${i + 1}`
     return {
-      name: p?.name ?? `Player ${i + 1}`,
+      id,
+      name: streamerPlayerLabel(streamerMode, rawName, i, id === online.uid),
       colorIndex: p?.colorIndex ?? i,
       score: playGame.scores?.[i] ?? 0,
       active: !playGame.finished && playGame.turnIndex === i,
@@ -306,40 +347,55 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
     winners.length > 1
       ? 'It\'s a tie!'
       : winners.length === 1
-        ? `${liveLobby.players?.[winnerSeat!]?.name ?? 'Player'} wins!`
+        ? streamerMode
+          ? `Player ${winners[0]! + 1} wins!`
+          : `${liveLobby.players?.[winnerSeat!]?.name ?? 'Player'} wins!`
         : 'Game over'
 
   const winDetail =
     winners.length > 1
       ? `Tied at ${playGame.scores?.[winners[0]!] ?? 0} boxes.`
       : winners.length === 1
-        ? `${liveLobby.players?.[winnerSeat!]?.name ?? 'Player'} claimed ${playGame.scores?.[winners[0]!] ?? 0} boxes.`
+        ? streamerMode
+          ? `Player ${winners[0]! + 1} claimed ${playGame.scores?.[winners[0]!] ?? 0} boxes.`
+          : `${liveLobby.players?.[winnerSeat!]?.name ?? 'Player'} claimed ${playGame.scores?.[winners[0]!] ?? 0} boxes.`
         : ''
 
   return (
     <div className="min-h-full flex flex-col pb-8 animate-fade-in">
       <StatusBar
-        players={statusPlayers}
-        subtitle={`Lobby ${online.code} · ${playGame.dots}×${playGame.dots}${
-          turnSecs ? ` · ${turnSecs}s / turn` : ''
-        }${myTurn ? ' · Your turn' : ''}`}
+        subtitle={streamerSubtitle(streamerMode, {
+          lobbyCode: online.code ?? undefined,
+          dots: playGame.dots,
+          turnSecs: turnSecs || undefined,
+          myTurn,
+        })}
         onLeave={() => {
           void online.leave().then(() => onExit())
         }}
         leaveLabel="Leave"
         onRestart={isHost ? () => void online.playAgain() : undefined}
         restartLabel="Play again"
-        timerSeconds={timer.enabled ? timer.remainingSec : null}
+        timerSeconds={
+          timer.waitingSync ? 0 : timer.enabled ? timer.remainingSec : null
+        }
         timerUrgent={timer.urgency}
+        timerPending={timer.waitingSync}
       />
-      {!myTurn && !playGame.finished && (
-        <p className="text-center text-sm text-slate-500 px-4">
-          Waiting for{' '}
-          {liveLobby.players?.[liveLobby.seatOrder?.[playGame.turnIndex] ?? '']?.name ?? 'opponent'}
-          …
+      {timer.waitingSync && !playGame.finished && (
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 px-4">Turn skipped…</p>
+      )}
+      {!myTurn && !playGame.finished && !timer.waitingSync && (
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 px-4">
+          {streamerMode
+            ? 'Waiting for opponent…'
+            : `Waiting for ${
+                liveLobby.players?.[liveLobby.seatOrder?.[playGame.turnIndex] ?? '']?.name ??
+                'opponent'
+              }…`}
         </p>
       )}
-      <div className="flex-1 flex items-center px-2">
+      <GameBoardLayout players={statusPlayers}>
         <Board
           game={playGame}
           interactive={myTurn}
@@ -349,7 +405,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
             (id) => liveLobby.players?.[id]?.colorIndex ?? 0,
           )}
         />
-      </div>
+      </GameBoardLayout>
       {online.error && (
         <p className="mx-auto max-w-md text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-3">
           {online.error}

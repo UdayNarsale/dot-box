@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-display: "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
@@ -7,6 +9,18 @@
   --color-paper: #f3f5f8;
   --color-mist: #e4e8ef;
   --color-slate-line: #9aa3b5;
+  --color-btn: #1a1f2e;
+  --color-btn-fg: #ffffff;
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-ink: #eef0f4;
+  --color-paper: #151922;
+  --color-mist: #2a3142;
+  --color-slate-line: #6b7280;
+  --color-btn: #eef0f4;
+  --color-btn-fg: #1a1f2e;
 }
 
 html,
@@ -24,6 +38,13 @@ body {
     radial-gradient(ellipse 100% 70% at 100% 0%, #ffe4d6 0%, transparent 45%),
     linear-gradient(180deg, #f7f8fb 0%, #eef1f6 100%);
   -webkit-font-smoothing: antialiased;
+}
+
+html.dark body {
+  background:
+    radial-gradient(ellipse 120% 80% at 10% -10%, #1e3a5f 0%, transparent 50%),
+    radial-gradient(ellipse 100% 70% at 100% 0%, #3d1f2a 0%, transparent 45%),
+    linear-gradient(180deg, #12151c 0%, #0d1017 100%);
 }
 
 @keyframes fade-in {
@@ -59,24 +80,42 @@ body {
   0%,
   100% {
     box-shadow:
-      0 0 0 1px color-mix(in srgb, currentColor 35%, transparent),
-      0 0 0 0 color-mix(in srgb, currentColor 0%, transparent);
-    background-color: color-mix(in srgb, currentColor 4%, white);
+      0 0 0 0 color-mix(in srgb, currentColor 15%, transparent),
+      0 0 12px 0 color-mix(in srgb, currentColor 8%, transparent);
+    background-color: color-mix(in srgb, currentColor 5%, white);
+    border-color: color-mix(in srgb, currentColor 40%, #e2e8f0);
+    opacity: 0.9;
   }
   50% {
     box-shadow:
-      0 0 0 2px color-mix(in srgb, currentColor 55%, transparent),
-      0 0 14px 2px color-mix(in srgb, currentColor 18%, transparent);
-    background-color: color-mix(in srgb, currentColor 10%, white);
+      0 0 0 4px color-mix(in srgb, currentColor 28%, transparent),
+      0 0 22px 6px color-mix(in srgb, currentColor 24%, transparent);
+    background-color: color-mix(in srgb, currentColor 14%, white);
+    border-color: currentColor;
+    opacity: 1;
   }
 }
 
-@keyframes turn-label {
+html.dark .animate-pulse-turn {
+  animation-name: pulse-turn-dark;
+}
+
+@keyframes pulse-turn-dark {
   0%,
   100% {
-    opacity: 0.55;
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, currentColor 20%, transparent),
+      0 0 12px 0 color-mix(in srgb, currentColor 12%, transparent);
+    background-color: color-mix(in srgb, currentColor 8%, #151922);
+    border-color: color-mix(in srgb, currentColor 40%, #334155);
+    opacity: 0.9;
   }
   50% {
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, currentColor 32%, transparent),
+      0 0 22px 6px color-mix(in srgb, currentColor 28%, transparent);
+    background-color: color-mix(in srgb, currentColor 18%, #151922);
+    border-color: currentColor;
     opacity: 1;
   }
 }
@@ -90,12 +129,8 @@ body {
 }
 
 .animate-pulse-turn {
-  animation: pulse-turn 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-  will-change: box-shadow, background-color;
-}
-
-.animate-turn-label {
-  animation: turn-label 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  animation: pulse-turn 2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: box-shadow, background-color, border-color, opacity;
 }
 
 .board-frame {
@@ -104,6 +139,11 @@ body {
   contain: layout paint;
   border-radius: 1rem;
   background: #ffffff;
+}
+
+html.dark .board-frame {
+  background: #1e2433;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06);
 }
 
 .board-svg {
@@ -126,12 +166,18 @@ body {
 .board-hover-line {
   pointer-events: none;
   opacity: 0;
-  transition: opacity 120ms ease;
+  /* Muted preview — same hue as active player but clearly not a placed line */
+  stroke: color-mix(in srgb, currentColor 34%, #94a3b8);
+  transition: opacity 100ms ease;
+}
+
+html.dark .board-hover-line {
+  stroke: color-mix(in srgb, currentColor 34%, #64748b);
 }
 
 .board-edge:hover .board-hover-line,
 .board-edge:focus-within .board-hover-line {
-  opacity: 0.92;
+  opacity: 0.55;
 }
 
 .board-hit {

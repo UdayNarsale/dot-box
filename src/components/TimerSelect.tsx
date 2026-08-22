@@ -44,10 +44,10 @@ export function TimerSelect({
 
   return (
     <div className="block">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
-      {hint && <span className="block text-xs text-slate-500 mt-0.5">{hint}</span>}
+      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+      {hint && <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{hint}</span>}
       <select
-        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-50"
+        className="mt-2 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 disabled:opacity-50"
         value={mode}
         disabled={disabled}
         onChange={(e) => {
@@ -72,7 +72,7 @@ export function TimerSelect({
 
       {mode === 'custom' && (
         <label className="mt-3 block">
-          <span className="text-xs font-medium text-slate-600">
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
             Custom seconds (min {MIN_TURN_SECONDS})
           </span>
           <input
@@ -88,7 +88,7 @@ export function TimerSelect({
               setCustomText(String(n))
               onChange(n)
             }}
-            className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-50"
+            className="mt-1.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 disabled:opacity-50"
           />
         </label>
       )}

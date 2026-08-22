@@ -24,7 +24,9 @@ export function Board({
   highlightPlayer,
   playerColorIndexes,
 }: BoardProps) {
-  const { dots, lines, boxes } = game
+  const { dots, lines: rawLines, boxes: rawBoxes } = game
+  const lines = rawLines ?? {}
+  const boxes = rawBoxes ?? {}
 
   const cell = dots >= 12 ? 36 : dots >= 9 ? 42 : 52
   const pad = 20
@@ -32,7 +34,7 @@ export function Board({
   const dotR = dots >= 12 ? 4.5 : 5.25
   const hit = Math.min(24, cell * 0.58)
   const drawnWidth = dots >= 12 ? 3.5 : 4.25
-  const hoverWidth = dots >= 12 ? 4.25 : 5.25
+  const hoverWidth = dots >= 12 ? 3 : 3.75
 
   const current = paletteColor(highlightPlayer ?? 0, playerColorIndexes)
 

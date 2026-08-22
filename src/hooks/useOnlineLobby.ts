@@ -7,6 +7,7 @@ import {
   deleteLobby,
   joinLobby,
   leaveLobby,
+  reconnectLobby,
   resetLobbyGame,
   setPlayerColor,
   applyTimeoutOnlineTurn,
@@ -15,6 +16,7 @@ import {
   subscribeLobby,
   updateLobbySettings,
 } from '../firebase/lobby'
+import { clearSession, loadSession, saveSession } from '../firebase/session'
 import type { LobbySettings, LobbyState } from '../types/game'
 
 export function useOnlineLobby() {
@@ -23,12 +25,44 @@ export function useOnlineLobby() {
   const [lobby, setLobby] = useState<LobbyState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [restoring, setRestoring] = useState(
+    () => Boolean(loadSession()) && isFirebaseConfigured(),
+  )
 
   /** Move counts we already played SFX for (self submit or remote hear). */
   const heardMoveRef = useRef(0)
   const lastBoxCountRef = useRef(0)
   const lastLineCountRef = useRef(0)
   const selfMoveRef = useRef(0)
+
+  useEffect(() => {
+    let cancelled = false
+    async function restore() {
+      const session = loadSession()
+      if (!session || !isFirebaseConfigured()) {
+        setRestoring(false)
+        return
+      }
+      try {
+        const res = await reconnectLobby(session.code)
+        if (cancelled) return
+        if (res) {
+          setCode(res.code)
+          setUid(res.uid)
+        } else {
+          clearSession()
+        }
+      } catch {
+        if (!cancelled) clearSession()
+      } finally {
+        if (!cancelled) setRestoring(false)
+      }
+    }
+    void restore()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!code) {
@@ -54,16 +88,16 @@ export function useOnlineLobby() {
 
     if (game.moveCount === 0) {
       heardMoveRef.current = 0
-      lastBoxCountRef.current = Object.keys(game.boxes).length
-      lastLineCountRef.current = Object.keys(game.lines).length
+      lastBoxCountRef.current = Object.keys(game.boxes ?? {}).length
+      lastLineCountRef.current = Object.keys(game.lines ?? {}).length
       selfMoveRef.current = 0
       return
     }
 
     if (game.moveCount <= heardMoveRef.current) return
 
-    const boxCount = Object.keys(game.boxes).length
-    const lineCount = Object.keys(game.lines).length
+    const boxCount = Object.keys(game.boxes ?? {}).length
+    const lineCount = Object.keys(game.lines ?? {}).length
     const closedBoxes = boxCount > lastBoxCountRef.current
     const placedLine = lineCount > lastLineCountRef.current
     const isSelf = game.moveCount === selfMoveRef.current
@@ -92,6 +126,7 @@ export function useOnlineLobby() {
       const res = await createLobby(settings, hostName)
       setCode(res.code)
       setUid(res.uid)
+      saveSession({ code: res.code, name: hostName.trim() || 'Host', intent: 'create' })
       return res
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create lobby')
@@ -112,6 +147,7 @@ export function useOnlineLobby() {
       const res = await joinLobby(joinCode, name)
       setCode(res.code)
       setUid(res.uid)
+      saveSession({ code: res.code, name: name.trim(), intent: 'join' })
       return res
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to join lobby')
@@ -129,6 +165,7 @@ export function useOnlineLobby() {
     } catch {
       /* ignore */
     } finally {
+      clearSession()
       setCode(null)
       setUid(null)
       setLobby(null)
@@ -144,6 +181,7 @@ export function useOnlineLobby() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to end lobby')
     } finally {
+      clearSession()
       setCode(null)
       setUid(null)
       setLobby(null)
@@ -164,10 +202,10 @@ export function useOnlineLobby() {
   )
 
   const assignColor = useCallback(
-    async (playerId: string, colorIndex: number) => {
+    async (colorIndex: number) => {
       if (!code || !uid) return
       try {
-        await setPlayerColor(code, uid, playerId, colorIndex)
+        await setPlayerColor(code, uid, colorIndex)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to set color')
       }
@@ -219,6 +257,7 @@ export function useOnlineLobby() {
       if (!result) return false
 
       try {
+        const nextTurnPlayerId = lobby.seatOrder[result.state.turnIndex]!
         await submitOnlineMove(
           code,
           uid,
@@ -233,6 +272,7 @@ export function useOnlineLobby() {
           },
           edgeId,
           lobby.game.moveCount,
+          nextTurnPlayerId,
         )
         selfMoveRef.current = result.state.moveCount
         heardMoveRef.current = result.state.moveCount
@@ -274,6 +314,7 @@ export function useOnlineLobby() {
 
   return {
     configured: isFirebaseConfigured(),
+    restoring,
     code,
     uid,
     lobby,

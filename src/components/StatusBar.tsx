@@ -1,20 +1,12 @@
 import { useState } from 'react'
-import { PLAYER_COLORS } from '../types/game'
 import { BrandMark } from './BrandMark'
 import { ConfirmDialog } from './ConfirmDialog'
+import { GameSettingsMenu } from './GameSettingsMenu'
+import type { PlayerCardData } from './PlayerCard'
 
-interface StatusPlayer {
-  name: string
-  colorIndex: number
-  score: number
-  active: boolean
-  isYou?: boolean
-  /** Owes one or more skipped turns from timeouts. */
-  skipNext?: boolean
-}
+export type StatusPlayer = PlayerCardData
 
 interface StatusBarProps {
-  players: StatusPlayer[]
   onRestart?: () => void
   onLeave?: () => void
   restartLabel?: string
@@ -27,10 +19,11 @@ interface StatusBarProps {
   /** Seconds left on the active turn clock; null/undefined hides the badge. */
   timerSeconds?: number | null
   timerUrgent?: boolean
+  /** When true, show "…" instead of 0s while the turn skip syncs. */
+  timerPending?: boolean
 }
 
 export function StatusBar({
-  players,
   onRestart,
   onLeave,
   restartLabel = 'Restart',
@@ -42,6 +35,7 @@ export function StatusBar({
   restartConfirmDetail,
   timerSeconds = null,
   timerUrgent = false,
+  timerPending = false,
 }: StatusBarProps) {
   const [confirm, setConfirm] = useState<'leave' | 'restart' | null>(null)
 
@@ -55,7 +49,9 @@ export function StatusBar({
               <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--color-ink)]">
                 Dots & Boxes
               </h1>
-              {subtitle && <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>}
+              {subtitle && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{subtitle}</p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -63,73 +59,26 @@ export function StatusBar({
               <div
                 className={`rounded-lg px-3 py-2 text-sm font-semibold tabular-nums border transition-colors ${
                   timerUrgent
-                    ? 'bg-red-50 border-red-200 text-red-700'
-                    : 'bg-white/80 border-slate-200 text-slate-700'
+                    ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+                    : timerPending
+                      ? 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                      : 'bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
                 }`}
                 aria-live="polite"
                 title="Time left this turn"
               >
-                {timerSeconds}s
+                {timerPending ? '…' : `${timerSeconds}s`}
               </div>
             )}
-            {onLeave && (
-              <button
-                type="button"
-                onClick={() => setConfirm('leave')}
-                className="rounded-lg px-3 py-2 text-sm font-medium bg-white/70 border border-slate-200 hover:bg-white transition"
-              >
-                {leaveLabel}
-              </button>
-            )}
-            {onRestart && (
-              <button
-                type="button"
-                onClick={() => setConfirm('restart')}
-                className="rounded-lg px-3 py-2 text-sm font-medium bg-[var(--color-ink)] text-white hover:opacity-90 transition"
-              >
-                {restartLabel}
-              </button>
+            {(onLeave || onRestart) && (
+              <GameSettingsMenu
+                onLeave={onLeave ? () => setConfirm('leave') : undefined}
+                onRestart={onRestart ? () => setConfirm('restart') : undefined}
+                leaveLabel={leaveLabel}
+                restartLabel={restartLabel}
+              />
             )}
           </div>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {players.map((p, i) => {
-            const color = PLAYER_COLORS[p.colorIndex % PLAYER_COLORS.length]!
-            return (
-              <div
-                key={`${p.name}-${i}`}
-                className={`min-w-[7.5rem] flex-1 rounded-xl border px-3 py-2 backdrop-blur transition-[border-color,background-color] duration-300 ${
-                  p.active ? 'animate-pulse-turn border-current' : 'bg-white/80 border-slate-200'
-                }`}
-                style={p.active ? { color: color.stroke } : undefined}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="inline-block size-2.5 rounded-full shrink-0"
-                    style={{ background: color.stroke }}
-                  />
-                  <span className="text-xs font-medium text-slate-700 truncate">
-                    {p.name}
-                    {p.isYou ? ' (you)' : ''}
-                  </span>
-                </div>
-                <div className="mt-1 text-xl font-semibold tabular-nums" style={{ color: color.stroke }}>
-                  {p.score}
-                </div>
-                {p.active && (
-                  <div className="animate-turn-label text-[10px] uppercase tracking-wide font-semibold">
-                    Turn
-                  </div>
-                )}
-                {!p.active && p.skipNext && (
-                  <div className="text-[10px] uppercase tracking-wide font-semibold text-amber-700">
-                    Skip next
-                  </div>
-                )}
-              </div>
-            )
-          })}
         </div>
       </header>
 

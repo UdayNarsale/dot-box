@@ -10,6 +10,13 @@
     <title>Dots & Boxes</title>
   </head>
   <body>
+    <script>
+      try {
+        if (localStorage.getItem('dots-boxes-dark') === 'on') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (_) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

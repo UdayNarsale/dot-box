@@ -33,7 +33,8 @@
               ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 24"
             },
             "colorIndex": {
-              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 7"
+              ".write": "auth != null && auth.uid === $uid && root.child('lobbies').child($code).child('status').val() === 'waiting'",
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 19"
             },
             "joinedAt": {
               ".validate": "newData.isNumber()"
@@ -41,10 +42,16 @@
           }
         },
         "game": {
+          ".write": "auth != null && root.child('lobbies').child($code).child('players').child(auth.uid).exists()",
           ".validate": "newData.val() === null || newData.hasChildren(['scores', 'turnIndex', 'moveCount', 'finished'])",
           "lines": {
             "$edgeId": {
-              ".validate": "!data.exists() && newData.isNumber() && newData.val() >= 0 && newData.val() <= 7"
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 7 && (!data.exists() || newData.val() === data.val())"
+            }
+          },
+          "boxes": {
+            "$boxId": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 7 && (!data.exists() || newData.val() === data.val())"
             }
           },
           "turnIndex": {
@@ -58,6 +65,9 @@
           },
           "turnStartedAt": {
             ".validate": "!newData.exists() || (newData.isNumber() && newData.val() > 0)"
+          },
+          "turnPlayerId": {
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0)"
           },
           "skipPenalties": {
             ".validate": "!newData.exists() || newData.hasChildren()"

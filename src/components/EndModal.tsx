@@ -24,12 +24,12 @@ export function EndModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-fade-in">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="end-title"
-        className="w-full max-w-sm rounded-2xl bg-white shadow-xl border border-slate-200 p-6"
+        className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-700 p-6"
       >
         <div className="flex gap-2 mb-3">
           {winnerColorIndexes.map((ci) => (
@@ -43,12 +43,12 @@ export function EndModal({
         <h2 id="end-title" className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
           {title}
         </h2>
-        <p className="mt-2 text-sm text-slate-600 leading-relaxed">{detail}</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{detail}</p>
         <div className="mt-6 flex flex-col gap-2">
           <button
             type="button"
             onClick={onPrimary}
-            className="w-full rounded-xl bg-[var(--color-ink)] text-white py-3 font-medium hover:opacity-90 transition"
+            className="w-full rounded-xl bg-[var(--color-btn)] text-[var(--color-btn-fg)] py-3 font-medium hover:opacity-90 transition"
           >
             {primaryLabel}
           </button>
@@ -56,7 +56,7 @@ export function EndModal({
             <button
               type="button"
               onClick={onSecondary}
-              className="w-full rounded-xl bg-slate-100 text-slate-800 py-3 font-medium hover:bg-slate-200 transition"
+              className="w-full rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 py-3 font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition"
             >
               {secondaryLabel}
             </button>

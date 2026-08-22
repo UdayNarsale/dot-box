@@ -9,6 +9,7 @@ import {
   type Unsubscribe,
 } from 'firebase/database'
 import { applyTimeoutPenalty, createGame, toStringList } from '../engine/gameEngine'
+import { MAX_COLOR_INDEX } from '../types/game'
 import type { LobbyGame, LobbySettings, LobbyState } from '../types/game'
 import { ensureAnonymousAuth, getFirebaseDb } from './config'
 
@@ -16,11 +17,30 @@ function nowMs() {
   return Date.now()
 }
 
-function withTurnClock(game: Omit<LobbyGame, 'turnStartedAt'> | LobbyGame): LobbyGame {
+function withTurnClock(
+  game: Omit<LobbyGame, 'turnStartedAt' | 'turnPlayerId'> & {
+    turnStartedAt?: number
+    turnPlayerId?: string
+  },
+  turnPlayerId: string,
+): LobbyGame {
   return {
     ...game,
     turnStartedAt: nowMs(),
+    turnPlayerId,
   }
+}
+
+function lobbyRef(code: string) {
+  return ref(getFirebaseDb(), `lobbies/${code.toUpperCase()}`)
+}
+
+function gameRef(code: string) {
+  return ref(getFirebaseDb(), `lobbies/${code.toUpperCase()}/game`)
+}
+
+function playerRef(code: string, uid: string) {
+  return ref(getFirebaseDb(), `lobbies/${code.toUpperCase()}/players/${uid}`)
 }
 
 /** RTDB drops empty objects and may return arrays as maps — normalize for the UI. */
@@ -44,6 +64,8 @@ export function normalizeLobby(raw: LobbyState): LobbyState {
           boxes: raw.game.boxes ?? {},
           skipPenalties: raw.game.skipPenalties ?? [],
           turnStartedAt: Number(raw.game.turnStartedAt) || Date.now(),
+          turnPlayerId:
+            raw.game.turnPlayerId ?? seatOrder[Number(raw.game.turnIndex) || 0] ?? undefined,
         }
       : null,
   }
@@ -59,10 +81,6 @@ export function generateLobbyCode(length = 6): string {
     code += CODE_CHARS[arr[i]! % CODE_CHARS.length]
   }
   return code
-}
-
-function lobbyRef(code: string) {
-  return ref(getFirebaseDb(), `lobbies/${code.toUpperCase()}`)
 }
 
 export async function createLobby(
@@ -102,6 +120,13 @@ export async function createLobby(
   throw new Error('Could not allocate a lobby code. Try again.')
 }
 
+function gameMaps(game: LobbyGame | null | undefined) {
+  return {
+    lines: game?.lines ?? {},
+    boxes: game?.boxes ?? {},
+  }
+}
+
 export async function joinLobby(
   code: string,
   name: string,
@@ -112,15 +137,16 @@ export async function joinLobby(
 
   const result = await runTransaction(r, (current: LobbyState | null) => {
     if (!current) return current
-    if (current.status !== 'waiting') return
+    // Same uid reconnecting (e.g. after refresh) — skip join checks.
     if (current.players[uid]) return current
+    if (current.status !== 'waiting') return
 
     const count = Object.keys(current.players).length
     if (count >= current.settings.maxPlayers) return
 
     const usedColors = new Set(Object.values(current.players).map((p) => p.colorIndex))
     let colorIndex = 0
-    while (usedColors.has(colorIndex) && colorIndex < 8) colorIndex++
+    while (usedColors.has(colorIndex) && colorIndex < MAX_COLOR_INDEX) colorIndex++
 
     return {
       ...current,
@@ -139,6 +165,17 @@ export async function joinLobby(
   if (!result.committed || !result.snapshot.exists()) {
     throw new Error('Unable to join. Check the code, lobby capacity, or if the game already started.')
   }
+  return { uid, code: normalized }
+}
+
+/** Reconnect after refresh when the same anonymous uid is still in the lobby. */
+export async function reconnectLobby(code: string): Promise<{ uid: string; code: string } | null> {
+  const uid = await ensureAnonymousAuth()
+  const normalized = code.trim().toUpperCase()
+  const snap = await get(lobbyRef(normalized))
+  if (!snap.exists()) return null
+  const lobby = normalizeLobby(snap.val() as LobbyState)
+  if (!lobby.players[uid]) return null
   return { uid, code: normalized }
 }
 
@@ -176,38 +213,47 @@ export async function leaveLobby(code: string, uid: string): Promise<void> {
 
 export async function setPlayerColor(
   code: string,
-  hostId: string,
-  playerId: string,
+  uid: string,
   colorIndex: number,
 ): Promise<void> {
-  if (colorIndex < 0 || colorIndex > 7) {
+  if (colorIndex < 0 || colorIndex > MAX_COLOR_INDEX) {
     throw new Error('Invalid color.')
   }
-  const r = lobbyRef(code)
-  const result = await runTransaction(r, (current: LobbyState | null) => {
-    if (!current) return current
-    if (current.hostId !== hostId) return
-    if (current.status !== 'waiting') return
-    if (!current.players[playerId]) return
 
-    const taken = Object.entries(current.players).some(
-      ([id, p]) => id !== playerId && p.colorIndex === colorIndex,
-    )
-    if (taken) return
+  const normalized = code.trim().toUpperCase()
+  const lobbyR = lobbyRef(normalized)
+  const playerR = playerRef(normalized, uid)
 
-    return {
-      ...current,
-      players: {
-        ...current.players,
-        [playerId]: {
-          ...current.players[playerId]!,
-          colorIndex,
-        },
-      },
+  const snap = await get(lobbyR)
+  if (!snap.exists()) throw new Error('Lobby not found.')
+  const lobby = normalizeLobby(snap.val() as LobbyState)
+  if (lobby.status !== 'waiting') {
+    throw new Error('Colors can only be changed in the waiting room.')
+  }
+  if (!lobby.players[uid]) {
+    throw new Error('You are not in this lobby.')
+  }
+
+  const taken = Object.entries(lobby.players).some(
+    ([id, p]) => id !== uid && p.colorIndex === colorIndex,
+  )
+  if (taken) throw new Error('That color is already taken.')
+
+  try {
+    const current = lobby.players[uid]!
+    await update(playerR, {
+      name: current.name,
+      colorIndex,
+      joinedAt: current.joinedAt,
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (/permission_denied/i.test(msg)) {
+      throw new Error(
+        'Could not save color — Firebase blocked the write. Publish the latest database.rules.json (colorIndex 0–19) in the Firebase console.',
+      )
     }
-  })
-  if (!result.committed) {
-    throw new Error('Color is already taken, or only the host can assign colors before the game starts.')
+    throw e
   }
 }
 
@@ -237,15 +283,19 @@ export async function startLobbyGame(code: string, uid: string): Promise<void> {
     if (new Set(colors).size !== colors.length) return
 
     const fresh = createGame(current.settings.dots, current.seatOrder.length)
-    const game = withTurnClock({
-      lines: {},
-      boxes: {},
-      scores: fresh.scores,
-      turnIndex: 0,
-      moveCount: 0,
-      finished: false,
-      skipPenalties: fresh.skipPenalties,
-    })
+    const firstPlayer = current.seatOrder[0]!
+    const game = withTurnClock(
+      {
+        lines: {},
+        boxes: {},
+        scores: fresh.scores,
+        turnIndex: 0,
+        moveCount: 0,
+        finished: false,
+        skipPenalties: fresh.skipPenalties,
+      },
+      firstPlayer,
+    )
     return {
       ...current,
       status: 'playing',
@@ -259,35 +309,42 @@ export async function startLobbyGame(code: string, uid: string): Promise<void> {
 export async function submitOnlineMove(
   code: string,
   uid: string,
-  nextGame: Omit<LobbyGame, 'turnStartedAt'> & { turnStartedAt?: number },
+  nextGame: Omit<LobbyGame, 'turnStartedAt' | 'turnPlayerId'> & {
+    turnStartedAt?: number
+    turnPlayerId?: string
+  },
   edgeId: string,
   expectedMoveCount: number,
+  nextTurnPlayerId: string,
 ): Promise<void> {
-  const r = lobbyRef(code)
-  await runTransaction(r, (current: LobbyState | null) => {
-    if (!current || current.status !== 'playing' || !current.game) return
-    if (current.game.moveCount !== expectedMoveCount) return
-    if (current.game.finished) return
-    const seat = current.seatOrder[current.game.turnIndex]
-    if (seat !== uid) return
-    if (current.game.lines[edgeId] !== undefined) return
+  const gr = gameRef(code)
+  await runTransaction(gr, (current: LobbyGame | null) => {
+    if (!current) return
+    if (current.moveCount !== expectedMoveCount) return
+    if (current.finished) return
+    if (current.turnPlayerId && current.turnPlayerId !== uid) return
+    const { lines } = gameMaps(current)
+    if (lines[edgeId] !== undefined) return
 
-    const status = nextGame.finished ? 'finished' : 'playing'
-    return {
-      ...current,
-      status,
-      game: withTurnClock({
+    return withTurnClock(
+      {
         lines: nextGame.lines,
         boxes: nextGame.boxes,
         scores: nextGame.scores,
         turnIndex: nextGame.turnIndex,
         moveCount: nextGame.moveCount,
         finished: nextGame.finished,
-        skipPenalties: nextGame.skipPenalties ?? current.game.skipPenalties ?? [],
-      }),
+        skipPenalties: nextGame.skipPenalties ?? current.skipPenalties ?? [],
+      },
+      nextTurnPlayerId,
+    )
+  }).then(async (res) => {
+    if (!res.committed) {
+      throw new Error('Move rejected (not your turn, stale state, or line taken).')
     }
-  }).then((res) => {
-    if (!res.committed) throw new Error('Move rejected (not your turn, stale state, or line taken).')
+    if (nextGame.finished) {
+      await update(lobbyRef(code), { status: 'finished' })
+    }
   })
 }
 
@@ -296,35 +353,43 @@ export async function applyTimeoutOnlineTurn(
   code: string,
   expectedMoveCount: number,
 ): Promise<void> {
-  const r = lobbyRef(code)
-  await runTransaction(r, (current: LobbyState | null) => {
-    if (!current || current.status !== 'playing' || !current.game) return
-    if (current.game.finished) return
-    if (current.game.moveCount !== expectedMoveCount) return
+  const lobbySnap = await get(lobbyRef(code))
+  if (!lobbySnap.exists()) return
+  const lobby = normalizeLobby(lobbySnap.val() as LobbyState)
+  if (lobby.status !== 'playing' || !lobby.game) return
 
-    const turnSeconds = current.settings.turnSeconds ?? 0
-    if (!turnSeconds || turnSeconds <= 0) return
+  const turnSeconds = lobby.settings.turnSeconds ?? 0
+  if (!turnSeconds || turnSeconds <= 0) return
 
-    const started = current.game.turnStartedAt ?? 0
+  const seatOrder = lobby.seatOrder
+  const dots = lobby.settings.dots
+
+  await runTransaction(gameRef(code), (current: LobbyGame | null) => {
+    if (!current) return
+    if (current.finished) return
+    if (current.moveCount !== expectedMoveCount) return
+
+    const started = current.turnStartedAt ?? 0
     if (!started || Date.now() < started + turnSeconds * 1000) return
 
+    const { lines, boxes } = gameMaps(current)
     const state = {
-      dots: current.settings.dots,
-      lines: current.game.lines,
-      boxes: current.game.boxes,
-      scores: current.game.scores,
-      turnIndex: current.game.turnIndex,
-      moveCount: current.game.moveCount,
-      finished: current.game.finished,
-      playerCount: current.seatOrder.length,
-      skipPenalties: current.game.skipPenalties ?? [],
+      dots,
+      lines,
+      boxes,
+      scores: current.scores,
+      turnIndex: current.turnIndex,
+      moveCount: current.moveCount,
+      finished: current.finished,
+      playerCount: seatOrder.length,
+      skipPenalties: current.skipPenalties ?? [],
     }
     const next = applyTimeoutPenalty(state)
     if (!next) return
 
-    return {
-      ...current,
-      game: withTurnClock({
+    const nextTurnPlayerId = seatOrder[next.turnIndex] ?? seatOrder[0]!
+    return withTurnClock(
+      {
         lines: next.lines,
         boxes: next.boxes,
         scores: next.scores,
@@ -332,8 +397,9 @@ export async function applyTimeoutOnlineTurn(
         moveCount: next.moveCount,
         finished: next.finished,
         skipPenalties: next.skipPenalties,
-      }),
-    }
+      },
+      nextTurnPlayerId,
+    )
   })
 }
 
@@ -345,18 +411,22 @@ export async function resetLobbyGame(code: string, uid: string): Promise<void> {
     if (current.seatOrder.length < 2) return
 
     const fresh = createGame(current.settings.dots, current.seatOrder.length)
+    const firstPlayer = current.seatOrder[0]!
     return {
       ...current,
       status: 'playing',
-      game: withTurnClock({
-        lines: {},
-        boxes: {},
-        scores: fresh.scores,
-        turnIndex: 0,
-        moveCount: 0,
-        finished: false,
-        skipPenalties: fresh.skipPenalties,
-      }),
+      game: withTurnClock(
+        {
+          lines: {},
+          boxes: {},
+          scores: fresh.scores,
+          turnIndex: 0,
+          moveCount: 0,
+          finished: false,
+          skipPenalties: fresh.skipPenalties,
+        },
+        firstPlayer,
+      ),
     }
   }).then((res) => {
     if (!res.committed) throw new Error('Only the host can restart with at least 2 players.')

@@ -3,29 +3,11 @@
  * Four gameplay cues only (plus optional win flourish kept separate).
  */
 
-let ctx: AudioContext | null = null
-
-function getCtx(): AudioContext | null {
-  if (typeof window === 'undefined') return null
-  if (!ctx) {
-    const AC =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    if (!AC) return null
-    ctx = new AC()
-  }
-  return ctx
-}
+import { isMusicEnabled } from '../preferences/gamePreferences'
+import { getAudioContext, resumeAudioContext } from './context'
 
 async function resume() {
-  const c = getCtx()
-  if (c && c.state === 'suspended') {
-    try {
-      await c.resume()
-    } catch {
-      /* ignore */
-    }
-  }
+  await resumeAudioContext()
 }
 
 function tone(
@@ -36,7 +18,7 @@ function tone(
   when = 0,
   slideTo?: number,
 ) {
-  const c = getCtx()
+  const c = getAudioContext()
   if (!c) return
   const t0 = c.currentTime + when
   const osc = c.createOscillator()
@@ -89,6 +71,7 @@ export async function playMoveSound(opts: {
   isSelf: boolean
   closedBoxes: boolean
 }) {
+  if (!isMusicEnabled()) return
   if (opts.closedBoxes) {
     if (opts.isSelf) await playSelfBox()
     else await playOpponentBox()
@@ -101,6 +84,7 @@ export async function playMoveSound(opts: {
 
 /** End-of-game flourish (original synth; not one of the four move cues). */
 export async function playWinSound() {
+  if (!isMusicEnabled()) return
   await resume()
   tone(523.25, 0.12, 'sine', 0.07)
   tone(659.25, 0.12, 'sine', 0.07, 0.1)

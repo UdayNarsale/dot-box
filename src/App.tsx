@@ -1,12 +1,19 @@
 import { useState } from 'react'
+import { loadSession } from './firebase/session'
 import { isFirebaseConfigured } from './firebase/config'
 import { LocalGame } from './components/LocalGame'
 import { Menu } from './components/Menu'
 import { OnlineFlow } from './components/OnlineFlow'
+import { useThemeEffect } from './hooks/useThemeEffect'
 import type { AppMode } from './types/game'
 
 export default function App() {
-  const [mode, setMode] = useState<AppMode>('menu')
+  useThemeEffect()
+  const [mode, setMode] = useState<AppMode>(() => {
+    const session = loadSession()
+    if (!session || !isFirebaseConfigured()) return 'menu'
+    return session.intent === 'create' ? 'online-create' : 'online-join'
+  })
   const firebaseReady = isFirebaseConfigured()
 
   if (mode === 'local') {

@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAuth, signInAnonymously, type Auth } from 'firebase/auth'
+import { getAuth, setPersistence, browserLocalPersistence, signInAnonymously, type Auth } from 'firebase/auth'
 import { getDatabase, type Database } from 'firebase/database'
 
 const config = {
@@ -46,6 +46,7 @@ export function getFirebaseDb(): Database {
 
 export async function ensureAnonymousAuth(): Promise<string> {
   const a = getFirebaseAuth()
+  await setPersistence(a, browserLocalPersistence)
   if (a.currentUser) return a.currentUser.uid
   const cred = await signInAnonymously(a)
   return cred.user.uid
