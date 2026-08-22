@@ -40,8 +40,22 @@ interface PhaseMix {
   filterHz: number
 }
 
+/** Old 100% slider ≈ new 25%; boost music only (SFX unchanged). */
+const MUSIC_LOUDNESS_BOOST = 4
+
+function scaleMusicMix(mix: PhaseMix): PhaseMix {
+  return {
+    ...mix,
+    master: mix.master * MUSIC_LOUDNESS_BOOST,
+    pad: mix.pad * MUSIC_LOUDNESS_BOOST,
+    arp: mix.arp * MUSIC_LOUDNESS_BOOST,
+    bass: mix.bass * MUSIC_LOUDNESS_BOOST,
+    pulse: mix.pulse * MUSIC_LOUDNESS_BOOST,
+  }
+}
+
 /** Calm menu / lobby — softer than in-game smooth. */
-const AMBIENT_MIX: PhaseMix = {
+const AMBIENT_MIX: PhaseMix = scaleMusicMix({
   bpm: 64,
   master: 0.12,
   pad: 0.042,
@@ -49,12 +63,12 @@ const AMBIENT_MIX: PhaseMix = {
   bass: 0,
   pulse: 0,
   filterHz: 780,
-}
+})
 
 const PHASE_MIX: Record<MusicPhase, PhaseMix> = {
-  smooth: { bpm: 70, master: 0.11, pad: 0.045, arp: 0.028, bass: 0, pulse: 0, filterHz: 900 },
-  intense: { bpm: 92, master: 0.15, pad: 0.05, arp: 0.042, bass: 0.038, pulse: 0.012, filterHz: 1400 },
-  peak: { bpm: 118, master: 0.19, pad: 0.055, arp: 0.05, bass: 0.052, pulse: 0.028, filterHz: 2200 },
+  smooth: scaleMusicMix({ bpm: 70, master: 0.11, pad: 0.045, arp: 0.028, bass: 0, pulse: 0, filterHz: 900 }),
+  intense: scaleMusicMix({ bpm: 92, master: 0.15, pad: 0.05, arp: 0.042, bass: 0.038, pulse: 0.012, filterHz: 1400 }),
+  peak: scaleMusicMix({ bpm: 118, master: 0.19, pad: 0.055, arp: 0.05, bass: 0.052, pulse: 0.028, filterHz: 2200 }),
 }
 
 function mixForTarget(target: BgmTarget): PhaseMix {
