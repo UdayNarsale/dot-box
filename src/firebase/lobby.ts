@@ -465,6 +465,62 @@ export async function applyTimeoutOnlineTurn(
   })
 }
 
+export async function kickLobbyPlayer(
+  code: string,
+  hostUid: string,
+  targetUid: string,
+): Promise<void> {
+  if (hostUid === targetUid) throw new Error('You cannot kick yourself.')
+
+  const r = lobbyRef(code)
+  const result = await runTransaction(r, (current: LobbyState | null) => {
+    if (!current) return current
+    if (current.hostId !== hostUid) return
+    if (current.status !== 'waiting') return
+    if (!current.players[targetUid]) return
+
+    const { [targetUid]: _removed, ...players } = current.players
+    const seatOrder = current.seatOrder.filter((id) => id !== targetUid)
+    if (seatOrder.length === 0) return null
+
+    return {
+      ...current,
+      players,
+      seatOrder,
+    }
+  })
+
+  if (!result.committed) {
+    throw new Error('Only the host can remove a player from the waiting room.')
+  }
+}
+
+/** Host returns a finished or in-progress game to the waiting room. */
+export async function returnLobbyToWaiting(code: string, uid: string): Promise<void> {
+  const r = lobbyRef(code)
+  const result = await runTransaction(r, (current: LobbyState | null) => {
+    if (!current) return current
+    if (current.hostId !== uid) return
+    if (current.status === 'waiting') return
+
+    const players = { ...current.players }
+    for (const id of Object.keys(players)) {
+      players[id] = { ...players[id]!, ready: false }
+    }
+
+    return {
+      ...current,
+      status: 'waiting',
+      game: null,
+      players,
+    }
+  })
+
+  if (!result.committed) {
+    throw new Error('Only the host can return the lobby to the waiting room.')
+  }
+}
+
 export async function resetLobbyGame(code: string, uid: string): Promise<void> {
   const r = lobbyRef(code)
   await runTransaction(r, (current: LobbyState | null) => {

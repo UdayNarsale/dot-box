@@ -308,11 +308,22 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
                               {p.ready ? 'Ready ✓' : 'Ready up'}
                             </button>
                           ) : (
-                            <span
-                              className={`shrink-0 text-xs font-medium ${p.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}
-                            >
-                              {p.ready ? 'Ready' : 'Not ready'}
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span
+                                className={`text-xs font-medium ${p.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}
+                              >
+                                {p.ready ? 'Ready' : 'Not ready'}
+                              </span>
+                              {isHost && (
+                                <button
+                                  type="button"
+                                  onClick={() => void online.kickPlayer(id)}
+                                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/60 transition"
+                                >
+                                  Kick
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                         {id === online.uid ? (
@@ -438,6 +449,7 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
         onLeave={() => {
           void online.leave().then(() => onExit())
         }}
+        onBackToLobby={isHost ? () => void online.returnToLobby() : undefined}
         leaveLabel="Leave"
         onRestart={isHost ? () => void online.playAgain() : undefined}
         restartLabel="Play again"
@@ -498,6 +510,8 @@ export function OnlineFlow({ intent, onExit }: OnlineFlowProps) {
         onPrimary={() => {
           if (isHost) void online.playAgain()
         }}
+        backToLobbyLabel={isHost ? 'Back to lobby' : undefined}
+        onBackToLobby={isHost ? () => void online.returnToLobby() : undefined}
         secondaryLabel="Leave"
         onSecondary={() => {
           void online.leave().then(() => onExit())

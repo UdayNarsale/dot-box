@@ -23,15 +23,19 @@ function SettingsIcon() {
 interface GameSettingsMenuProps {
   onLeave?: () => void
   onRestart?: () => void
+  onBackToLobby?: () => void
   leaveLabel?: string
   restartLabel?: string
+  backToLobbyLabel?: string
 }
 
 export function GameSettingsMenu({
   onLeave,
   onRestart,
+  onBackToLobby,
   leaveLabel = 'Leave',
   restartLabel = 'Play again',
+  backToLobbyLabel = 'Back to lobby',
 }: GameSettingsMenuProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -76,7 +80,7 @@ export function GameSettingsMenu({
         >
           <SettingsPanel className="border-0 bg-transparent divide-y divide-slate-100 dark:divide-slate-800" />
 
-          {(onRestart || onLeave) && (
+          {(onRestart || onBackToLobby || onLeave) && (
             <div className="my-1 mx-2 border-t border-slate-100 dark:border-slate-800" />
           )}
 
@@ -91,6 +95,20 @@ export function GameSettingsMenu({
               className="w-full mx-1 max-w-[calc(100%-0.5rem)] px-3 py-2.5 text-left text-sm font-medium text-[var(--color-ink)] hover:bg-slate-50 dark:hover:bg-slate-800 transition rounded-lg"
             >
               {restartLabel}
+            </button>
+          )}
+
+          {onBackToLobby && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                onBackToLobby()
+              }}
+              className="w-full mx-1 max-w-[calc(100%-0.5rem)] px-3 py-2.5 text-left text-sm font-medium text-[var(--color-ink)] hover:bg-slate-50 dark:hover:bg-slate-800 transition rounded-lg"
+            >
+              {backToLobbyLabel}
             </button>
           )}
 

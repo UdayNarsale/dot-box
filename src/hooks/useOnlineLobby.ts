@@ -7,6 +7,8 @@ import {
   deleteLobby,
   joinLobby,
   leaveLobby,
+  kickLobbyPlayer,
+  returnLobbyToWaiting,
   reconnectLobby,
   resetLobbyGame,
   setPlayerColor,
@@ -73,6 +75,24 @@ export function useOnlineLobby() {
     const unsub = subscribeLobby(code, setLobby)
     return unsub
   }, [code])
+
+  /** Lobby deleted or this player was kicked — clear local session. */
+  useEffect(() => {
+    if (!code || restoring) return
+    if (lobby === null) {
+      clearSession()
+      setCode(null)
+      setUid(null)
+      return
+    }
+    if (uid && !lobby.players[uid]) {
+      clearSession()
+      setCode(null)
+      setUid(null)
+      setLobby(null)
+      setError('You were removed from the lobby.')
+    }
+  }, [lobby, code, uid, restoring])
 
   // Reset audio tracking when lobby code changes or game restarts to move 0.
   useEffect(() => {
@@ -259,6 +279,35 @@ export function useOnlineLobby() {
     }
   }, [code, uid])
 
+  const returnToLobby = useCallback(async () => {
+    if (!code || !uid) return
+    setBusy(true)
+    setError(null)
+    try {
+      await returnLobbyToWaiting(code, uid)
+      heardMoveRef.current = 0
+      lastBoxCountRef.current = 0
+      lastLineCountRef.current = 0
+      selfMoveRef.current = 0
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to return to waiting room')
+    } finally {
+      setBusy(false)
+    }
+  }, [code, uid])
+
+  const kickPlayer = useCallback(
+    async (targetUid: string) => {
+      if (!code || !uid) return
+      try {
+        await kickLobbyPlayer(code, uid, targetUid)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to remove player')
+      }
+    },
+    [code, uid],
+  )
+
   const playEdge = useCallback(
     async (edgeId: string) => {
       if (!code || !uid || !lobby?.game || lobby.status !== 'playing') return false
@@ -345,6 +394,8 @@ export function useOnlineLobby() {
     setReady,
     start,
     playAgain,
+    returnToLobby,
+    kickPlayer,
     playEdge,
     expireTurn,
   }

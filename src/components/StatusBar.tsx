@@ -9,7 +9,9 @@ export type StatusPlayer = PlayerCardData
 interface StatusBarProps {
   onRestart?: () => void
   onLeave?: () => void
+  onBackToLobby?: () => void
   restartLabel?: string
+  backToLobbyLabel?: string
   leaveLabel?: string
   subtitle?: string
   leaveConfirmTitle?: string
@@ -28,7 +30,9 @@ interface StatusBarProps {
 export function StatusBar({
   onRestart,
   onLeave,
+  onBackToLobby,
   restartLabel = 'Restart',
+  backToLobbyLabel = 'Back to lobby',
   leaveLabel = 'Leave',
   subtitle,
   leaveConfirmTitle,
@@ -85,12 +89,14 @@ export function StatusBar({
                 )}
               </div>
             )}
-            {(onLeave || onRestart) && (
+            {(onLeave || onRestart || onBackToLobby) && (
               <GameSettingsMenu
                 onLeave={onLeave ? () => setConfirm('leave') : undefined}
                 onRestart={onRestart ? () => setConfirm('restart') : undefined}
+                onBackToLobby={onBackToLobby}
                 leaveLabel={leaveLabel}
                 restartLabel={restartLabel}
+                backToLobbyLabel={backToLobbyLabel}
               />
             )}
           </div>

@@ -8,6 +8,8 @@ interface EndModalProps {
   winnerColorIndexes?: number[]
   primaryLabel: string
   onPrimary: () => void
+  backToLobbyLabel?: string
+  onBackToLobby?: () => void
   secondaryLabel?: string
   onSecondary?: () => void
 }
@@ -19,6 +21,8 @@ export function EndModal({
   winnerColorIndexes = [],
   primaryLabel,
   onPrimary,
+  backToLobbyLabel,
+  onBackToLobby,
   secondaryLabel,
   onSecondary,
 }: EndModalProps) {
@@ -55,6 +59,15 @@ export function EndModal({
           >
             {primaryLabel}
           </button>
+          {backToLobbyLabel && onBackToLobby && (
+            <button
+              type="button"
+              onClick={onBackToLobby}
+              className="w-full rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 py-3 font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+            >
+              {backToLobbyLabel}
+            </button>
+          )}
           {secondaryLabel && onSecondary && (
             <button
               type="button"
