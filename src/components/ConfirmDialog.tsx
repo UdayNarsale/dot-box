@@ -32,7 +32,7 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby="confirm-title"
         aria-describedby="confirm-detail"
-        className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-700 p-6"
+        className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-700 p-5 sm:p-6 max-h-[min(90dvh,640px)] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="confirm-title" className="text-xl font-semibold tracking-tight text-[var(--color-ink)]">

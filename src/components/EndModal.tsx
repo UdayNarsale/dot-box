@@ -29,7 +29,7 @@ export function EndModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="end-title"
-        className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-700 p-6"
+        className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-700 p-5 sm:p-6 max-h-[min(90dvh,640px)] overflow-y-auto"
       >
         <div className="flex gap-2 mb-3">
           {winnerColorIndexes.map((ci) => (

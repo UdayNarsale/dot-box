@@ -3,8 +3,10 @@ import {
   isDarkMode,
   isMusicEnabled,
   isStreamerMode,
+  getMusicVolume,
   setDarkMode,
   setMusicEnabled,
+  setMusicVolume,
   setStreamerMode,
   subscribeGamePreferences,
 } from '../preferences/gamePreferences'
@@ -16,9 +18,11 @@ export function useGamePreferences() {
 
   return {
     musicEnabled: isMusicEnabled(),
+    musicVolume: getMusicVolume(),
     streamerMode: isStreamerMode(),
     darkMode: isDarkMode(),
     setMusicEnabled,
+    setMusicVolume,
     setStreamerMode,
     setDarkMode,
   }

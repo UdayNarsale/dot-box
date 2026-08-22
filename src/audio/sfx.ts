@@ -4,7 +4,7 @@
  */
 
 import { isMusicEnabled } from '../preferences/gamePreferences'
-import { getAudioContext, resumeAudioContext } from './context'
+import { getAudioContext, getAudioDestination, resumeAudioContext } from './context'
 
 async function resume() {
   await resumeAudioContext()
@@ -19,7 +19,8 @@ function tone(
   slideTo?: number,
 ) {
   const c = getAudioContext()
-  if (!c) return
+  const dest = getAudioDestination()
+  if (!c || !dest) return
   const t0 = c.currentTime + when
   const osc = c.createOscillator()
   const g = c.createGain()
@@ -32,7 +33,7 @@ function tone(
   g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012)
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration)
   osc.connect(g)
-  g.connect(c.destination)
+  g.connect(dest)
   osc.start(t0)
   osc.stop(t0 + duration + 0.02)
 }

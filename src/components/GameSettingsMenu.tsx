@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useGamePreferences } from '../hooks/useGamePreferences'
+import { SettingsPanel } from './SettingsPanel'
 
 function SettingsIcon() {
   return (
@@ -20,39 +20,6 @@ function SettingsIcon() {
   )
 }
 
-interface ToggleRowProps {
-  label: string
-  hint?: string
-  on: boolean
-  onToggle: () => void
-}
-
-function ToggleRow({ label, hint, on, onToggle }: ToggleRowProps) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition rounded-lg"
-    >
-      <span className="min-w-0">
-        <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">{label}</span>
-        {hint && (
-          <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{hint}</span>
-        )}
-      </span>
-      <span
-        className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${
-          on
-            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
-            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-        }`}
-      >
-        {on ? 'On' : 'Off'}
-      </span>
-    </button>
-  )
-}
-
 interface GameSettingsMenuProps {
   onLeave?: () => void
   onRestart?: () => void
@@ -68,14 +35,6 @@ export function GameSettingsMenu({
 }: GameSettingsMenuProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  const {
-    musicEnabled,
-    streamerMode,
-    darkMode,
-    setMusicEnabled,
-    setStreamerMode,
-    setDarkMode,
-  } = useGamePreferences()
 
   useEffect(() => {
     if (!open) return
@@ -103,7 +62,7 @@ export function GameSettingsMenu({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="rounded-lg p-2.5 bg-white/70 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition text-slate-700 dark:text-slate-200"
-        aria-label="Settings"
+        aria-label="Game settings"
         aria-expanded={open}
         aria-haspopup="menu"
       >
@@ -113,29 +72,12 @@ export function GameSettingsMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 z-50 w-56 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1 animate-fade-in"
+          className="absolute right-0 top-full mt-2 z-50 w-72 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-2 px-1 animate-fade-in"
         >
-          <ToggleRow
-            label="Music"
-            hint="Background music and sound effects"
-            on={musicEnabled}
-            onToggle={() => setMusicEnabled(!musicEnabled)}
-          />
-          <ToggleRow
-            label="Streamer mode"
-            hint="Hide lobby code and names"
-            on={streamerMode}
-            onToggle={() => setStreamerMode(!streamerMode)}
-          />
-          <ToggleRow
-            label="Dark mode"
-            hint="Dark background and panels"
-            on={darkMode}
-            onToggle={() => setDarkMode(!darkMode)}
-          />
+          <SettingsPanel className="border-0 bg-transparent divide-y divide-slate-100 dark:divide-slate-800" />
 
           {(onRestart || onLeave) && (
-            <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+            <div className="my-1 mx-2 border-t border-slate-100 dark:border-slate-800" />
           )}
 
           {onRestart && (
@@ -146,7 +88,7 @@ export function GameSettingsMenu({
                 setOpen(false)
                 onRestart()
               }}
-              className="w-full px-3 py-2.5 text-left text-sm font-medium text-[var(--color-ink)] hover:bg-slate-50 dark:hover:bg-slate-800 transition rounded-lg"
+              className="w-full mx-1 max-w-[calc(100%-0.5rem)] px-3 py-2.5 text-left text-sm font-medium text-[var(--color-ink)] hover:bg-slate-50 dark:hover:bg-slate-800 transition rounded-lg"
             >
               {restartLabel}
             </button>
@@ -160,7 +102,7 @@ export function GameSettingsMenu({
                 setOpen(false)
                 onLeave()
               }}
-              className="w-full px-3 py-2.5 text-left text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition rounded-lg"
+              className="w-full mx-1 max-w-[calc(100%-0.5rem)] px-3 py-2.5 text-left text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition rounded-lg"
             >
               {leaveLabel}
             </button>

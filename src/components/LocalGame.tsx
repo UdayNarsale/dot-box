@@ -3,6 +3,7 @@ import type { Player } from '../types/game'
 import { PLAYER_COLORS } from '../types/game'
 import { useLocalGame } from '../hooks/useLocalGame'
 import { useGameMusic } from '../hooks/useGameMusic'
+import { useAmbientMusic } from '../hooks/useAmbientMusic'
 import { useTurnTimer } from '../hooks/useTurnTimer'
 import { Board } from './Board'
 import { ColorPicker, colorsTakenBy, firstFreeColor } from './ColorPicker'
@@ -21,6 +22,14 @@ import {
 import { StatusBar } from './StatusBar'
 import { TimerSelect } from './TimerSelect'
 import { GameSettingsMenu } from './GameSettingsMenu'
+import {
+  btnRow,
+  btnRowHalf,
+  btnRowPrimary,
+  ScreenCard,
+  ScreenPage,
+  ScreenScroll,
+} from './ScreenLayout'
 
 interface LocalGameProps {
   onExit: () => void
@@ -46,7 +55,8 @@ export function LocalGame({ onExit }: LocalGameProps) {
   } = useLocalGame(5, 2)
   const { streamerMode } = useGamePreferences()
 
-  useGameMusic(!setup, game)
+  useAmbientMusic(setup || game.finished)
+  useGameMusic(!setup && !game.finished, game)
 
   const timer = useTurnTimer({
     turnSeconds: setup ? 0 : activeTurnSeconds,
@@ -86,81 +96,72 @@ export function LocalGame({ onExit }: LocalGameProps) {
 
   if (setup) {
     return (
-      <main className="min-h-full flex items-center justify-center p-6 animate-fade-in">
-        <div className="w-full max-w-md rounded-2xl bg-white/80 dark:bg-slate-900/85 border border-slate-200 dark:border-slate-700 p-6 shadow-sm space-y-5 relative">
-          <div className="absolute top-4 right-4">
-            <GameSettingsMenu />
-          </div>
-          <div>
-            <h2 className="text-2xl font-semibold">Local game</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Pass one device around. Same rules online.</p>
-          </div>
-          <NumberSelect
-            label="Dots per side"
-            hint={`${dots}×${dots} dots → ${(dots - 1) * (dots - 1)} boxes`}
-            value={dots}
-            min={MIN_DOTS}
-            max={MAX_DOTS}
-            onChange={setDots}
-          />
-          <NumberSelect
-            label="Players"
-            value={playerCount}
-            min={MIN_PLAYERS}
-            max={MAX_PLAYERS}
-            onChange={applyPlayerCount}
-          />
-          <TimerSelect seconds={turnSeconds} onChange={setTurnSeconds} />
-          <div className="space-y-4">
-            {names.slice(0, playerCount).map((name, i) => (
-              <div key={i} className="space-y-2 rounded-xl border border-slate-100 dark:border-slate-700 p-3">
-                <TextField
-                  label={`Player ${i + 1} (${PLAYER_COLORS[colorIndexes[i] ?? i]!.name})`}
-                  value={name}
-                  onChange={(v) =>
-                    setNames((prev) => {
-                      const next = [...prev]
-                      next[i] = v
-                      return next
-                    })
-                  }
-                />
-                <ColorPicker
-                  value={colorIndexes[i] ?? i}
-                  takenBy={colorsTakenBy(
-                    colorIndexes.slice(0, playerCount).flatMap((ci, j) =>
-                      j === i ? [] : [{ colorIndex: ci, seatIndex: j }],
-                    ),
-                  )}
-                  onChange={(ci) =>
-                    setColorIndexes((prev) => {
-                      const next = [...prev]
-                      next[i] = ci
-                      return next
-                    })
-                  }
-                />
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onExit}
-              className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 py-3 font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              onClick={start}
-              className="flex-1 rounded-xl bg-[var(--color-btn)] text-[var(--color-btn-fg)] py-3 font-medium hover:opacity-90"
-            >
-              Start
-            </button>
-          </div>
-        </div>
-      </main>
+      <ScreenPage>
+        <ScreenScroll className="py-2">
+          <ScreenCard
+            title="Local game"
+            subtitle="Pass one device around. Same rules as online."
+            headerAction={<GameSettingsMenu />}
+          >
+            <NumberSelect
+              label="Dots per side"
+              hint={`${dots}×${dots} dots → ${(dots - 1) * (dots - 1)} boxes`}
+              value={dots}
+              min={MIN_DOTS}
+              max={MAX_DOTS}
+              onChange={setDots}
+            />
+            <NumberSelect
+              label="Players"
+              value={playerCount}
+              min={MIN_PLAYERS}
+              max={MAX_PLAYERS}
+              onChange={applyPlayerCount}
+            />
+            <TimerSelect seconds={turnSeconds} onChange={setTurnSeconds} />
+            <div className="space-y-3 sm:space-y-4">
+              {names.slice(0, playerCount).map((name, i) => (
+                <div key={i} className="space-y-2 rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+                  <TextField
+                    label={`Player ${i + 1} (${PLAYER_COLORS[colorIndexes[i] ?? i]!.name})`}
+                    value={name}
+                    onChange={(v) =>
+                      setNames((prev) => {
+                        const next = [...prev]
+                        next[i] = v
+                        return next
+                      })
+                    }
+                  />
+                  <ColorPicker
+                    value={colorIndexes[i] ?? i}
+                    takenBy={colorsTakenBy(
+                      colorIndexes.slice(0, playerCount).flatMap((ci, j) =>
+                        j === i ? [] : [{ colorIndex: ci, seatIndex: j }],
+                      ),
+                    )}
+                    onChange={(ci) =>
+                      setColorIndexes((prev) => {
+                        const next = [...prev]
+                        next[i] = ci
+                        return next
+                      })
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+            <div className={btnRow}>
+              <button type="button" onClick={onExit} className={btnRowHalf}>
+                Back
+              </button>
+              <button type="button" onClick={start} className={btnRowPrimary}>
+                Start
+              </button>
+            </div>
+          </ScreenCard>
+        </ScreenScroll>
+      </ScreenPage>
     )
   }
 
@@ -193,7 +194,7 @@ export function LocalGame({ onExit }: LocalGameProps) {
         : ''
 
   return (
-    <div className="min-h-full flex flex-col pb-8 animate-fade-in">
+    <div className="min-h-dvh flex flex-col pb-[max(1rem,env(safe-area-inset-bottom))] animate-fade-in">
       <StatusBar
         onLeave={onExit}
         leaveLabel="Menu"

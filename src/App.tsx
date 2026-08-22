@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { loadSession } from './firebase/session'
 import { isFirebaseConfigured } from './firebase/config'
 import { LocalGame } from './components/LocalGame'
+import { HomeSettings } from './components/HomeSettings'
 import { Menu } from './components/Menu'
 import { OnlineFlow } from './components/OnlineFlow'
 import { useThemeEffect } from './hooks/useThemeEffect'
@@ -26,12 +27,17 @@ export default function App() {
     return <OnlineFlow intent="join" onExit={() => setMode('menu')} />
   }
 
+  if (mode === 'settings') {
+    return <HomeSettings onBack={() => setMode('menu')} />
+  }
+
   return (
     <Menu
       firebaseReady={firebaseReady}
       onLocal={() => setMode('local')}
       onCreate={() => setMode('online-create')}
       onJoin={() => setMode('online-join')}
+      onSettings={() => setMode('settings')}
     />
   )
 }

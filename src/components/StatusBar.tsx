@@ -41,23 +41,25 @@ export function StatusBar({
 
   return (
     <>
-      <header className="w-full max-w-3xl mx-auto px-3 pt-3 pb-2">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <BrandMark className="size-9 shrink-0" />
+      <header className="w-full max-w-3xl mx-auto px-3 sm:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <BrandMark className="size-8 sm:size-9 shrink-0" />
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[var(--color-ink)]">
+              <h1 className="text-base sm:text-xl font-semibold tracking-tight text-[var(--color-ink)] truncate">
                 Dots & Boxes
               </h1>
               {subtitle && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{subtitle}</p>
+                <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                  {subtitle}
+                </p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {timerSeconds !== null && timerSeconds !== undefined && (
               <div
-                className={`rounded-lg px-3 py-2 text-sm font-semibold tabular-nums border transition-colors ${
+                className={`rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold tabular-nums border transition-colors ${
                   timerUrgent
                     ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
                     : timerPending

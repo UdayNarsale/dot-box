@@ -65,7 +65,7 @@ export function TextField({ label, value, onChange, placeholder, maxLength }: Te
         maxLength={maxLength ?? 20}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600"
+        className="mt-2 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-3 text-base sm:text-sm outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600"
       />
     </label>
   )

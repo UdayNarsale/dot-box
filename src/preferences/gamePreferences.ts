@@ -1,6 +1,9 @@
 const MUSIC_KEY = 'dots-boxes-music'
 const STREAMER_KEY = 'dots-boxes-streamer'
 const DARK_KEY = 'dots-boxes-dark'
+const VOLUME_KEY = 'dots-boxes-volume'
+
+export const DEFAULT_MUSIC_VOLUME = 80
 
 type Listener = () => void
 const listeners = new Set<Listener>()
@@ -58,4 +61,27 @@ export function applyDarkModeClass(on?: boolean): void {
   if (typeof document === 'undefined') return
   const enabled = on ?? isDarkMode()
   document.documentElement.classList.toggle('dark', enabled)
+}
+
+export function getMusicVolume(): number {
+  try {
+    const raw = localStorage.getItem(VOLUME_KEY)
+    if (raw == null) return DEFAULT_MUSIC_VOLUME
+    const n = Number(raw)
+    if (!Number.isFinite(n)) return DEFAULT_MUSIC_VOLUME
+    return Math.min(100, Math.max(0, Math.round(n)))
+  } catch {
+    return DEFAULT_MUSIC_VOLUME
+  }
+}
+
+export function setMusicVolume(percent: number): void {
+  const clamped = Math.min(100, Math.max(0, Math.round(percent)))
+  localStorage.setItem(VOLUME_KEY, String(clamped))
+  notify()
+}
+
+/** Linear 0–1 gain for the shared master output. */
+export function getVolumeMultiplier(): number {
+  return getMusicVolume() / 100
 }

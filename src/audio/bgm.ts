@@ -1,12 +1,13 @@
 /**
  * Original procedural background music — Web Audio synth only, no samples or licensed tracks.
- * Three intensity phases keyed to how full the board is.
+ * Ambient (calm) for menu/lobby; three intensity phases during gameplay.
  */
 
-import { isMusicEnabled } from '../preferences/gamePreferences'
-import { getAudioContext, resumeAudioContext } from './context'
+import { isMusicEnabled, subscribeGamePreferences } from '../preferences/gamePreferences'
+import { getAudioContext, getAudioDestination, onAudioUnlocked, resumeAudioContext } from './context'
 
 export type MusicPhase = 'smooth' | 'intense' | 'peak'
+type BgmTarget = 'ambient' | MusicPhase
 
 /** Edges on a dots×dots grid (each line is one move). */
 export function totalEdgeCount(dots: number): number {
@@ -39,10 +40,26 @@ interface PhaseMix {
   filterHz: number
 }
 
+/** Calm menu / lobby — softer than in-game smooth. */
+const AMBIENT_MIX: PhaseMix = {
+  bpm: 64,
+  master: 0.12,
+  pad: 0.042,
+  arp: 0.024,
+  bass: 0,
+  pulse: 0,
+  filterHz: 780,
+}
+
 const PHASE_MIX: Record<MusicPhase, PhaseMix> = {
   smooth: { bpm: 70, master: 0.11, pad: 0.045, arp: 0.028, bass: 0, pulse: 0, filterHz: 900 },
   intense: { bpm: 92, master: 0.15, pad: 0.05, arp: 0.042, bass: 0.038, pulse: 0.012, filterHz: 1400 },
   peak: { bpm: 118, master: 0.19, pad: 0.055, arp: 0.05, bass: 0.052, pulse: 0.028, filterHz: 2200 },
+}
+
+function mixForTarget(target: BgmTarget): PhaseMix {
+  if (target === 'ambient') return AMBIENT_MIX
+  return PHASE_MIX[target]
 }
 
 /** Am → F → C → G (root, third, fifth) */
@@ -58,9 +75,9 @@ const ARP_DEGREES = [0, 2, 1, 2, 0, 1, 2, 1]
 class BgmEngine {
   private master: GainNode | null = null
   private filter: BiquadFilterNode | null = null
-  private target: MusicPhase = 'smooth'
+  private target: BgmTarget = 'ambient'
   private blendStart = 0
-  private blendFrom: PhaseMix = PHASE_MIX.smooth
+  private blendFrom: PhaseMix = AMBIENT_MIX
   private nextBeatTime = 0
   private beat = 0
   private chordStep = 0
@@ -74,12 +91,12 @@ class BgmEngine {
 
   private lerpMix(): PhaseMix {
     const c = this.ctx()
-    if (!c) return PHASE_MIX[this.target]
+    if (!c) return mixForTarget(this.target)
     const elapsed = c.currentTime - this.blendStart
     const t = Math.min(1, elapsed / 2.2)
     const ease = t * t * (3 - 2 * t)
     const from = this.blendFrom
-    const to = PHASE_MIX[this.target]
+    const to = mixForTarget(this.target)
     return {
       bpm: from.bpm + (to.bpm - from.bpm) * ease,
       master: from.master + (to.master - from.master) * ease,
@@ -190,13 +207,22 @@ class BgmEngine {
     }
   }
 
-  async start(phase: MusicPhase) {
+  private setTarget(target: BgmTarget) {
+    if (target === this.target) return
+    const c = this.ctx()
+    if (!c) return
+    this.blendFrom = this.lerpMix()
+    this.blendStart = c.currentTime
+    this.target = target
+  }
+
+  async ensurePlaying(target: BgmTarget) {
     if (!isMusicEnabled()) return
     const c = await resumeAudioContext()
-    if (!c) return
+    if (!c || c.state !== 'running') return
 
     if (this.running) {
-      this.setPhase(phase)
+      this.setTarget(target)
       return
     }
 
@@ -206,10 +232,12 @@ class BgmEngine {
     this.filter.Q.value = 0.6
     this.master.gain.setValueAtTime(0.0001, c.currentTime)
     this.filter.connect(this.master)
-    this.master.connect(c.destination)
+    const dest = getAudioDestination()
+    if (!dest) return
+    this.master.connect(dest)
 
-    this.target = phase
-    this.blendFrom = PHASE_MIX[phase]
+    this.target = target
+    this.blendFrom = mixForTarget(target)
     this.blendStart = c.currentTime
     this.beat = 0
     this.chordStep = 0
@@ -217,22 +245,12 @@ class BgmEngine {
     this.running = true
 
     this.master.gain.exponentialRampToValueAtTime(
-      PHASE_MIX[phase].master,
+      mixForTarget(target).master,
       c.currentTime + 1.2,
     )
 
     this.timer = setInterval(() => this.tick(), 40)
     this.tick()
-  }
-
-  setPhase(phase: MusicPhase) {
-    if (!this.running) return
-    if (phase === this.target) return
-    const c = this.ctx()
-    if (!c) return
-    this.blendFrom = this.lerpMix()
-    this.blendStart = c.currentTime
-    this.target = phase
   }
 
   stop() {
@@ -269,16 +287,68 @@ function getEngine(): BgmEngine {
   return engine
 }
 
-export async function startBgm(phase: MusicPhase): Promise<void> {
-  if (!isMusicEnabled()) return
-  await getEngine().start(phase)
+let ambientRequested = false
+let gameRequested = false
+let gameSnapshot: { dots: number; moveCount: number; finished: boolean } | null = null
+let ambientOffTimer: ReturnType<typeof setTimeout> | null = null
+
+function syncBgm() {
+  if (!isMusicEnabled()) {
+    getEngine().stop()
+    return
+  }
+
+  if (gameRequested && gameSnapshot && !gameSnapshot.finished) {
+    const phase = computeMusicPhase(gameSnapshot) ?? 'smooth'
+    void getEngine().ensurePlaying(phase)
+    return
+  }
+
+  if (ambientRequested) {
+    void getEngine().ensurePlaying('ambient')
+    return
+  }
+
+  getEngine().stop()
 }
 
-export function updateBgmPhase(phase: MusicPhase): void {
-  if (!isMusicEnabled()) return
-  getEngine().setPhase(phase)
+/** Calm music for home screen, lobby, and setup. */
+export function requestAmbientBgm(on: boolean): void {
+  if (on) {
+    if (ambientOffTimer !== null) {
+      window.clearTimeout(ambientOffTimer)
+      ambientOffTimer = null
+    }
+    ambientRequested = true
+    syncBgm()
+    return
+  }
+
+  if (ambientOffTimer !== null) window.clearTimeout(ambientOffTimer)
+  ambientOffTimer = window.setTimeout(() => {
+    ambientOffTimer = null
+    ambientRequested = false
+    syncBgm()
+  }, 100)
+}
+
+/** Phased in-game music; takes priority over ambient while active. */
+export function requestGameBgm(
+  on: boolean,
+  game?: { dots: number; moveCount: number; finished: boolean } | null,
+): void {
+  gameRequested = on
+  gameSnapshot = on && game ? game : null
+  syncBgm()
 }
 
 export function stopBgm(): void {
+  ambientRequested = false
+  gameRequested = false
+  gameSnapshot = null
   getEngine().stop()
 }
+
+subscribeGamePreferences(() => syncBgm())
+
+onAudioUnlocked(() => syncBgm())

@@ -107,4 +107,4 @@ export interface LobbyState {
   createdAt: number
 }
 
-export type AppMode = 'menu' | 'local' | 'online-create' | 'online-join' | 'online-play'
+export type AppMode = 'menu' | 'settings' | 'local' | 'online-create' | 'online-join' | 'online-play'
